@@ -1,7 +1,11 @@
-import { PLAPI, PLExtAPI, PLMainAPI } from "paperlib";
+import {
+  PLAPI,
+  PLExtAPI,
+  PLExtension,
+  PLMainAPI,
+  PaperEntity,
+} from "paperlib-api";
 
-import { PLExtension } from "@/models/extension";
-import { PaperEntity } from "@/models/paper-entity";
 import { MetadataScrapeService } from "@/services/metadata-scrape-service";
 
 interface IScraperPreference {
@@ -18,10 +22,7 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
 
   constructor() {
     super({
-      id: "paperlib-metadata-scrape-extension",
-      name: "Metadata Scrapers",
-      description: "The metadata scrape extension for PaperLib.",
-      author: "Paperlib",
+      id: "@future-scholars/paperlib-metadata-scrape-extension",
       defaultPreference: {
         presetting: {
           type: "options",
@@ -156,13 +157,14 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
         this.id,
         "presetting",
         (newValue) => {
+          // TODO: implement here
           console.log("presetting changed", newValue);
         },
       ),
     );
 
     this.disposeCallbacks.push(
-      PLAPI.hookService.hook("scrapeMetadata", this.id, "scrapeMetadata"),
+      PLAPI.hookService.hookModify("scrapeMetadata", this.id, "scrapeMetadata"),
     );
 
     this._registerContextMenu();
@@ -204,7 +206,7 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
         );
       }
     } else {
-      const scraperPref: Record<string, IScraperPreference>[] =
+      const scraperPref: Record<string, IScraperPreference> =
         PLExtAPI.extensionPreferenceService.getAll(this.id);
 
       for (const [id, pref] of Object.entries(scraperPref)) {
@@ -224,7 +226,7 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
     // TODO: Add scraper specific params
     const scrapedPaperEntityDrafts = await this._metadataScrapeService.scrape(
       paperEntityDrafts.map((paperEntityDraft) => {
-        return new PaperEntity(false).initialize(paperEntityDraft);
+        return new PaperEntity(paperEntityDraft);
       }),
       specificScrapers,
       force,

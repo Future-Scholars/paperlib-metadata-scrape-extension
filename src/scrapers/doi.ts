@@ -1,6 +1,4 @@
-import { isMetadataCompleted } from "@/utils/metadata";
-import { formatString } from "@/utils/string";
-import { PaperEntity } from "@/models/paper-entity";
+import { PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -23,12 +21,13 @@ interface ResponseType {
 export class DOIScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     return (
-      paperEntityDraft.doi !== "" && !isMetadataCompleted(paperEntityDraft)
+      paperEntityDraft.doi !== "" &&
+      !metadataUtils.isMetadataCompleted(paperEntityDraft)
     );
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
-    const doiID = formatString({
+    const doiID = stringUtils.formatString({
       str: paperEntityDraft.doi,
       removeNewline: true,
       removeWhite: true,
@@ -43,7 +42,7 @@ export class DOIScraper extends Scraper {
 
   static parsingProcess(
     rawResponse: { body: string; headers: Record<string, string> },
-    paperEntityDraft: PaperEntity
+    paperEntityDraft: PaperEntity,
   ): PaperEntity {
     if (rawResponse.body.startsWith("<")) {
       return paperEntityDraft;
@@ -109,28 +108,26 @@ export class DOIScraper extends Scraper {
       }
     }
 
-    paperEntityDraft.setValue("title", title, false, true);
-    paperEntityDraft.setValue("authors", authors);
-    paperEntityDraft.setValue("pubTime", `${pubTime}`);
-    paperEntityDraft.setValue("pubType", pubType);
-    paperEntityDraft.setValue("publication", publication);
+    paperEntityDraft.title = title;
+    paperEntityDraft.authors = authors;
+    paperEntityDraft.pubTime = `${pubTime}`;
+    paperEntityDraft.pubType = pubType;
+    paperEntityDraft.publication = publication;
     if (response.volume) {
-      paperEntityDraft.setValue("volume", response.volume);
+      paperEntityDraft.volume = response.volume;
     }
     if (response.issue) {
-      paperEntityDraft.setValue("number", response.issue);
+      paperEntityDraft.number = response.issue;
     }
     if (response.page) {
-      paperEntityDraft.setValue("pages", response.page);
+      paperEntityDraft.pages = response.page;
     }
     if (response.publisher) {
-      paperEntityDraft.setValue(
-        "publisher",
+      paperEntityDraft.publisher =
         response.publisher ===
-          "Institute of Electrical and Electronics Engineers (IEEE)"
+        "Institute of Electrical and Electronics Engineers (IEEE)"
           ? "IEEE"
-          : response.publisher
-      );
+          : response.publisher;
     }
     return paperEntityDraft;
   }

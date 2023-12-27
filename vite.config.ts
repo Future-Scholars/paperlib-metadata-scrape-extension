@@ -5,15 +5,12 @@ import path from "node:path";
 import modify from "rollup-plugin-modify";
 import { defineConfig } from "vite";
 
-import pkg from "./package.json";
-
 rmSync("dist", { recursive: true, force: true });
 rmSync("release", { recursive: true, force: true });
 
 // https://vitejs.dev/config/
 export default defineConfig({
   build: {
-    manifest: true,
     minify: true,
     reportCompressedSize: true,
     lib: {
@@ -41,19 +38,18 @@ export default defineConfig({
     },
   },
 
-  server: process.env.NODE_ENV
-    ? {
-        host: pkg.debug.env.VITE_DEV_SERVER_HOSTNAME,
-        port: pkg.debug.env.VITE_DEV_SERVER_PORT,
-      }
-    : undefined,
-
   plugins: [
     commonjs(),
     modify({
-      find: /import.*from "paperlib";?/,
+      find: /import\s*{\s*[\s\S]*}\s*from\s*"paperlib-api";?/,
       // find: /import { PLAPI } from "paperlib";/,
-      replace: (match, path) => "",
+      replace: (match, path) => {
+        const m = match
+          .replace(/PLAPI\s*,?\s*/g, "")
+          .replace(/PLExtAPI\s*,?\s*/g, "")
+          .replace(/PLMainAPI\s*,?\s*/g, "");
+        return m;
+      },
     }),
   ],
 });

@@ -1,8 +1,9 @@
-import { PLExtAPI } from "paperlib";
-
-import { PaperEntity } from "@/models/paper-entity";
-import { isMetadataCompleted } from "@/utils/metadata";
-import { formatString } from "@/utils/string";
+import {
+  PLExtAPI,
+  PaperEntity,
+  metadataUtils,
+  stringUtils,
+} from "paperlib-api";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -36,7 +37,7 @@ export class IEEEScraper extends Scraper {
     return (
       paperEntityDraft.title !== "" &&
       IEEEAPIKey !== "" &&
-      !isMetadataCompleted(paperEntityDraft)
+      !metadataUtils.isMetadataCompleted(paperEntityDraft)
     );
   }
 
@@ -47,7 +48,7 @@ export class IEEEScraper extends Scraper {
         "ieee-scrapers-api-key",
       ) as string) || "";
 
-    let requestTitle = formatString({
+    let requestTitle = stringUtils.formatString({
       str: paperEntityDraft.title,
       removeNewline: true,
     });
@@ -72,14 +73,14 @@ export class IEEEScraper extends Scraper {
     const response = JSON.parse(rawResponse.body) as ResponseType;
     if (response.total_records > 0) {
       for (const article of response.articles) {
-        const plainHitTitle = formatString({
+        const plainHitTitle = stringUtils.formatString({
           str: article.title,
           removeStr: "&amp;",
           removeSymbol: true,
           lowercased: true,
         });
 
-        const existTitle = formatString({
+        const existTitle = stringUtils.formatString({
           str: paperEntityDraft.title,
           removeStr: "&amp;",
           removeSymbol: true,
@@ -113,25 +114,23 @@ export class IEEEScraper extends Scraper {
           }
 
           const publication = article.publication_title;
-          paperEntityDraft.setValue("title", title, false, true);
-          paperEntityDraft.setValue("authors", authors);
-          paperEntityDraft.setValue("pubTime", `${pubTime}`);
-          paperEntityDraft.setValue("pubType", pubType);
-          paperEntityDraft.setValue("publication", publication);
+          paperEntityDraft.title = title;
+          paperEntityDraft.authors = authors;
+          paperEntityDraft.pubTime = `${pubTime}`;
+          paperEntityDraft.pubType = pubType;
+          paperEntityDraft.publication = publication;
           if (article.volume) {
-            paperEntityDraft.setValue("volume", article.volume);
+            paperEntityDraft.volume = article.volume;
           }
           if (article.start_page) {
-            paperEntityDraft.setValue("pages", article.start_page);
+            paperEntityDraft.pages = article.start_page;
           }
           if (article.end_page) {
-            paperEntityDraft.setValue(
-              "pages",
-              paperEntityDraft.pages + "-" + article.end_page,
-            );
+            paperEntityDraft.pages =
+              paperEntityDraft.pages + "-" + article.end_page;
           }
           if (article.publisher) {
-            paperEntityDraft.setValue("publisher", article.publisher);
+            paperEntityDraft.publisher = article.publisher;
           }
           break;
         }

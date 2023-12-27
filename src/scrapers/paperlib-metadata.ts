@@ -1,8 +1,6 @@
-import { PLAPI } from "paperlib";
+import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
 
-import { PaperEntity } from "@/models/paper-entity";
 import { ScraperRequestType } from "@/scrapers/scraper";
-import { formatString } from "@/utils/string";
 
 interface ResponseType {
   title: string;
@@ -34,7 +32,7 @@ export class PaperlibMetadataServiceScraper {
     paperEntityDraft: PaperEntity,
     scrapers: string[],
   ): ScraperRequestType {
-    const title = formatString({
+    const title = stringUtils.formatString({
       str: paperEntityDraft.title,
       removeNewline: true,
       removeStr: "&amp;",
@@ -65,17 +63,19 @@ export class PaperlibMetadataServiceScraper {
   ): PaperEntity {
     const response = JSON.parse(rawResponse.body) as ResponseType;
 
-    paperEntityDraft.setValue("title", response.title, false, true);
-    paperEntityDraft.setValue("authors", response.authors, false);
-    paperEntityDraft.setValue("publication", response.publication, false);
-    paperEntityDraft.setValue("pubTime", response.pubTime, false);
-    paperEntityDraft.setValue("pubType", response.pubType, false);
-    paperEntityDraft.setValue("doi", response.doi, false);
-    paperEntityDraft.setValue("arxiv", response.arxiv, false);
-    paperEntityDraft.setValue("pages", response.pages, false);
-    paperEntityDraft.setValue("volume", response.volume, false);
-    paperEntityDraft.setValue("number", response.number, false);
-    paperEntityDraft.setValue("publisher", response.publisher, false);
+    paperEntityDraft.title = response.title;
+    paperEntityDraft.authors = response.authors;
+    paperEntityDraft.publication = response.publication;
+    paperEntityDraft.pubTime = response.pubTime;
+    paperEntityDraft.pubType = response.pubType;
+    paperEntityDraft.doi = response.doi;
+    paperEntityDraft.arxiv = response.arxiv;
+    paperEntityDraft.pages = response.pages;
+    paperEntityDraft.volume = response.volume;
+    paperEntityDraft.number = response.number;
+    paperEntityDraft.publisher = response.publisher;
+    paperEntityDraft.codes = response.codes;
+
     return paperEntityDraft;
   }
 
@@ -94,7 +94,6 @@ export class PaperlibMetadataServiceScraper {
       scrapeURL += "&force=true";
     }
 
-    console.log(scrapeURL);
     const response = (await PLAPI.networkTool.get(
       scrapeURL,
       headers,

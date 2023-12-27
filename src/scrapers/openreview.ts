@@ -1,10 +1,7 @@
-import { PLAPI } from "paperlib";
+import { PLAPI, PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
 import stringSimilarity from "string-similarity";
 
-import { PaperEntity } from "@/models/paper-entity";
 import { bibtex2json } from "@/utils/bibtex";
-import { isMetadataCompleted } from "@/utils/metadata";
-import { formatString } from "@/utils/string";
 
 import { DBLPScraper } from "./dblp";
 import { Scraper, ScraperRequestType } from "./scraper";
@@ -24,7 +21,8 @@ interface ResponseType {
 export class OpenreviewScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     return (
-      paperEntityDraft.title !== "" && !isMetadataCompleted(paperEntityDraft)
+      paperEntityDraft.title !== "" &&
+      !metadataUtils.isMetadataCompleted(paperEntityDraft)
     );
   }
 
@@ -45,14 +43,14 @@ export class OpenreviewScraper extends Scraper {
     const notes = (JSON.parse(rawResponse.body) as ResponseType).notes;
 
     for (const note of notes) {
-      const plainHitTitle = formatString({
+      const plainHitTitle = stringUtils.formatString({
         str: note.content.title,
         removeStr: "&amp;",
         removeSymbol: true,
         lowercased: true,
       });
 
-      const existTitle = formatString({
+      const existTitle = stringUtils.formatString({
         str: paperEntityDraft.title,
         removeStr: "&amp;",
         removeSymbol: true,
@@ -64,8 +62,8 @@ export class OpenreviewScraper extends Scraper {
         const title = note.content.title.replaceAll("&amp;", "&");
         const authors = note.content.authors.join(", ");
 
-        paperEntityDraft.setValue("title", title, false, true);
-        paperEntityDraft.setValue("authors", authors);
+        paperEntityDraft.title = title;
+        paperEntityDraft.authors = authors;
 
         console.log(note.content);
         if (note.content.venue) {
@@ -77,21 +75,14 @@ export class OpenreviewScraper extends Scraper {
               const parsedBibTexs = bibtex2json(note.content._bibtex);
               if (parsedBibTexs.length > 0) {
                 const parsedBibTex = parsedBibTexs[0];
-                paperEntityDraft.setValue(
-                  "publication",
-                  parsedBibTex["container-title"],
-                  false,
-                );
-                paperEntityDraft.setValue(
-                  "pubTime",
-                  `${parsedBibTex["issued"]["date-parts"][0][0]}`,
-                );
+                paperEntityDraft.publication = parsedBibTex["container-title"];
+                paperEntityDraft.pubTime = `${parsedBibTex["issued"]["date-parts"][0][0]}`;
                 if (parsedBibTex["type"].includes("conference")) {
-                  paperEntityDraft.setValue("pubType", 1);
+                  paperEntityDraft.pubType = 1;
                 } else if (parsedBibTex["type"].includes("journal")) {
-                  paperEntityDraft.setValue("pubType", 0);
+                  paperEntityDraft.pubType = 0;
                 } else {
-                  paperEntityDraft.setValue("pubType", 2);
+                  paperEntityDraft.pubType = 2;
                 }
               }
             } else {
@@ -123,17 +114,17 @@ export class OpenreviewScraper extends Scraper {
               ).match(/\d{4}/g);
               const pubTime = pubTimeReg ? pubTimeReg[0] : "";
 
-              paperEntityDraft.setValue("pubTime", `${pubTime} `);
-              paperEntityDraft.setValue("publication", publication);
+              paperEntityDraft.pubTime = `${pubTime}`;
+              paperEntityDraft.publication = publication;
             }
           }
         } else {
           if (note.content._bibtex && note.content._bibtex.includes("year={")) {
             const pubTimeReg = note.content._bibtex.match(/year={(\d{4})/);
             const pubTime = pubTimeReg ? pubTimeReg[1] : "";
-            paperEntityDraft.setValue("pubTime", `${pubTime} `);
+            paperEntityDraft.pubTime = `${pubTime}`;
           }
-          paperEntityDraft.setValue("publication", "openreview.net");
+          paperEntityDraft.publication = "openreview.net";
         }
 
         break;

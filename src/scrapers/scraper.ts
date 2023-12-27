@@ -1,6 +1,4 @@
-import { PaperEntity } from "@/models/paper-entity";
-import { isMetadataCompleted } from "@/utils/metadata";
-import { PLAPI } from "paperlib";
+import { PLAPI, PaperEntity, metadataUtils } from "paperlib-api";
 
 export interface ScraperRequestType {
   scrapeURL: string;
@@ -38,6 +36,6 @@ export class Scraper {
 
   // Check if the  paperEntityDraft contains enough information to scrape. (NOT enable or not by user preference)
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
-    return !isMetadataCompleted(paperEntityDraft);
+    return !metadataUtils.isMetadataCompleted(paperEntityDraft);
   }
 }

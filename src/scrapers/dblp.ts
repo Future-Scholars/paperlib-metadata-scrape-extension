@@ -1,9 +1,6 @@
-import { PLAPI } from "paperlib";
+import { PLAPI, PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
 
-import { PaperEntity } from "@/models/paper-entity";
 import { bibtex2json } from "@/utils/bibtex";
-import { isMetadataCompleted } from "@/utils/metadata";
-import { formatString } from "@/utils/string";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -41,19 +38,21 @@ export class DBLPScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     return (
       paperEntityDraft.title.replaceAll("&amp;", "").replaceAll("&", "") !==
-        "" && !isMetadataCompleted(paperEntityDraft)
+        "" && !metadataUtils.isMetadataCompleted(paperEntityDraft)
     );
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
-    let dblpQuery = formatString({
+    let dblpQuery = stringUtils.formatString({
       str: paperEntityDraft.title,
       removeStr: "&amp;",
     });
-    dblpQuery = formatString({
-      str: dblpQuery,
-      removeStr: "&",
-    }).replace("—", "-");
+    dblpQuery = stringUtils
+      .formatString({
+        str: dblpQuery,
+        removeStr: "&",
+      })
+      .replace("—", "-");
 
     const scrapeURL =
       "https://dblp.org/search/publ/api?q=" + dblpQuery + "&format=json";
@@ -72,7 +71,7 @@ export class DBLPScraper extends Scraper {
       for (const hit of response.result.hits.hit) {
         const article = hit.info;
 
-        const plainHitTitle = formatString({
+        const plainHitTitle = stringUtils.formatString({
           str: article.title,
           removeStr: "&amp;",
           removeSymbol: true,
@@ -81,7 +80,7 @@ export class DBLPScraper extends Scraper {
           lowercased: true,
         });
 
-        const existTitle = formatString({
+        const existTitle = stringUtils.formatString({
           str: paperEntityDraft.title,
           removeStr: "&amp;",
           removeSymbol: true,
@@ -126,32 +125,30 @@ export class DBLPScraper extends Scraper {
             (pubKey == "journals/corr" && venueKey != "CoRR")
           ) {
             if (article.doi) {
-              paperEntityDraft.setValue("doi", article.doi);
+              paperEntityDraft.doi = article.doi;
             }
-            paperEntityDraft.setValue("title", title, false, true);
-            paperEntityDraft.setValue("authors", authors);
-            paperEntityDraft.setValue("pubTime", `${pubTime}`);
-            paperEntityDraft.setValue("pubType", pubType);
-            paperEntityDraft.setValue(
-              "publication",
+            paperEntityDraft.title = title;
+            paperEntityDraft.authors = authors;
+            paperEntityDraft.pubTime = `${pubTime}`;
+            paperEntityDraft.pubType = pubType;
+            paperEntityDraft.publication =
               "dblp://" +
-                JSON.stringify({
-                  venueID: pubKey == "journals/corr" ? venueKey : pubKey,
-                  paperKey: paperKey,
-                }),
-            );
+              JSON.stringify({
+                venueID: pubKey == "journals/corr" ? venueKey : pubKey,
+                paperKey: paperKey,
+              });
 
             if (article.volume) {
-              paperEntityDraft.setValue("volume", article.volume);
+              paperEntityDraft.volume = article.volume;
             }
             if (article.pages) {
-              paperEntityDraft.setValue("pages", article.pages);
+              paperEntityDraft.pages = article.pages;
             }
             if (article.number) {
-              paperEntityDraft.setValue("number", article.number);
+              paperEntityDraft.number = article.number;
             }
             if (article.publisher) {
-              paperEntityDraft.setValue("publisher", article.publisher);
+              paperEntityDraft.publisher = article.publisher;
             }
           }
           break;
@@ -284,10 +281,10 @@ export class DBLPScraper extends Scraper {
         const venueInfo = hit["info"];
         if (venueInfo["url"].includes(venueID.toLowerCase())) {
           const venue = venueInfo["venue"];
-          paperEntityDraft.setValue("publication", venue);
+          paperEntityDraft.publication = venue;
           break;
         } else {
-          paperEntityDraft.setValue("publication", "", true);
+          paperEntityDraft.publication = "";
         }
       }
 
@@ -295,15 +292,13 @@ export class DBLPScraper extends Scraper {
       try {
         const bibtex = bibtex2json(bibResponse.body);
         if (bibtex[0]["container-title"].toLowerCase().includes("workshop")) {
-          paperEntityDraft.setValue(
-            "publication",
-            paperEntityDraft.publication + " Workshop",
-          );
-          paperEntityDraft.setValue("pubType", 1);
+          paperEntityDraft.publication =
+            paperEntityDraft.publication + " Workshop";
+          paperEntityDraft.pubType = 1;
         }
       } catch (e) {}
     } else {
-      paperEntityDraft.setValue("publication", "", true);
+      paperEntityDraft.publication = "";
     }
     return paperEntityDraft;
   }

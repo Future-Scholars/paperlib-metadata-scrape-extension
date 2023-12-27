@@ -1,8 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 
-import { PaperEntity } from "@/models/paper-entity";
-import { isMetadataCompleted } from "@/utils/metadata";
-import { formatString } from "@/utils/string";
+import { PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -24,12 +22,12 @@ export class ArXivScraper extends Scraper {
     return (
       paperEntityDraft.arxiv !== "" &&
       paperEntityDraft.arxiv !== "undefined" &&
-      !isMetadataCompleted(paperEntityDraft)
+      !metadataUtils.isMetadataCompleted(paperEntityDraft)
     );
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
-    const arxivID = formatString({
+    const arxivID = stringUtils.formatString({
       str: paperEntityDraft.arxiv,
       removeStr: "arXiv:",
     });
@@ -65,11 +63,11 @@ export class ArXivScraper extends Scraper {
       }
 
       const pubTime = arxivResponse.published.substring(0, 4);
-      paperEntityDraft.setValue("title", title, false, true);
-      paperEntityDraft.setValue("authors", authors);
-      paperEntityDraft.setValue("pubTime", pubTime);
-      paperEntityDraft.setValue("pubType", 0);
-      paperEntityDraft.setValue("publication", "arXiv");
+      paperEntityDraft.title = title;
+      paperEntityDraft.authors = authors;
+      paperEntityDraft.pubTime = pubTime;
+      paperEntityDraft.pubType = 0;
+      paperEntityDraft.publication = "arXiv";
     }
     return paperEntityDraft;
   }

@@ -1,7 +1,4 @@
-import { PLAPI } from "paperlib";
-
-import { PaperEntity } from "@/models/paper-entity";
-import { formatString } from "@/utils/string";
+import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -20,12 +17,13 @@ export class PwCScraper extends Scraper {
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
-    const connectedTitle = formatString({
-      str: paperEntityDraft.title,
-      removeStr: "&amp;",
-      lowercased: true,
-      trimWhite: true,
-    })
+    const connectedTitle = stringUtils
+      .formatString({
+        str: paperEntityDraft.title,
+        removeStr: "&amp;",
+        lowercased: true,
+        trimWhite: true,
+      })
       .replace(/ /g, "-")
       .replace(/\./g, "");
     const scrapeURL = `https://paperswithcode.com/api/v1/search/?q=${connectedTitle}`;
@@ -67,7 +65,7 @@ export class PwCScraper extends Scraper {
           return 0;
         }
       });
-      paperEntityDraft.setValue("codes", codeList);
+      paperEntityDraft.codes = codeList;
     }
     return paperEntityDraft;
   }
@@ -99,7 +97,7 @@ export class PwCScraper extends Scraper {
         is_official: boolean;
       }[];
     };
-    const targetTitle = formatString({
+    const targetTitle = stringUtils.formatString({
       str: paperEntityDraft.title,
       removeStr: "&amp;",
       removeSymbol: true,
@@ -109,7 +107,7 @@ export class PwCScraper extends Scraper {
     let id = "";
     if (searchResponse.count) {
       for (const result of searchResponse.results) {
-        const hitTitle = formatString({
+        const hitTitle = stringUtils.formatString({
           str: result.paper.title,
           removeStr: "&amp;",
           removeSymbol: true,

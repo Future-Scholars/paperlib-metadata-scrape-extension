@@ -1,8 +1,6 @@
 import stringSimilarity from "string-similarity";
 
-import { PaperEntity } from "@/models/paper-entity";
-import { isMetadataCompleted } from "@/utils/metadata";
-import { formatString } from "@/utils/string";
+import { PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -26,15 +24,18 @@ interface ResponseType {
 export class SPIEScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     return (
-      paperEntityDraft.title !== "" && !isMetadataCompleted(paperEntityDraft)
+      paperEntityDraft.title !== "" &&
+      !metadataUtils.isMetadataCompleted(paperEntityDraft)
     );
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
-    const title = formatString({
-      str: paperEntityDraft.title,
-      removeNewline: true,
-    }).replace(" ", "+");
+    const title = stringUtils
+      .formatString({
+        str: paperEntityDraft.title,
+        removeNewline: true,
+      })
+      .replace(" ", "+");
     const scrapeURL = `https://www.spiedigitallibrary.org/search?term=${title}`;
     const headers = {
       "user-agent":
@@ -55,14 +56,14 @@ export class SPIEScraper extends Scraper {
       ) as ResponseType;
 
       for (const item of results.Items) {
-        const plainHitTitle = formatString({
+        const plainHitTitle = stringUtils.formatString({
           str: item.Title,
           removeStr: "&amp;",
           removeSymbol: true,
           lowercased: true,
         });
 
-        const existTitle = formatString({
+        const existTitle = stringUtils.formatString({
           str: paperEntityDraft.title,
           removeStr: "&amp;",
           removeSymbol: true,
@@ -74,56 +75,38 @@ export class SPIEScraper extends Scraper {
           existTitle,
         );
         if (sim > 0.95) {
-          paperEntityDraft.setValue(
-            "title",
-            item.Title.replaceAll("&amp;", "&"),
-            false,
-            true,
-          );
-          paperEntityDraft.setValue("doi", item.DOI, false);
+          paperEntityDraft.title = item.Title.replaceAll("&amp;", "&");
+          paperEntityDraft.doi = item.DOI;
 
           if (item.PublicationType.toLowerCase().includes("journal")) {
-            paperEntityDraft.setValue("pubType", 0, false);
+            paperEntityDraft.pubType = 0;
           } else if (item.PublicationType.toLowerCase().includes("book")) {
-            paperEntityDraft.setValue("pubType", 3, false);
+            paperEntityDraft.pubType = 3;
           } else if (
             item.PublicationType.toLowerCase().includes("proceeding")
           ) {
-            paperEntityDraft.setValue("pubType", 1, false);
+            paperEntityDraft.pubType = 1;
           } else {
-            paperEntityDraft.setValue("pubType", 2, false);
+            paperEntityDraft.pubType = 2;
           }
 
           if (item.StartPage && item.EndPage) {
-            paperEntityDraft.setValue(
-              "pages",
-              `${item.StartPage}-${item.EndPage}`,
-              false,
-            );
+            paperEntityDraft.pages = `${item.StartPage}-${item.EndPage}`;
           }
-          paperEntityDraft.setValue(
-            "publication",
-            item.JournalName?.replaceAll("_", " ") || item.ParentTitle,
-            false,
-          );
-          paperEntityDraft.setValue(
-            "pubTime",
-            `${new Date(item.PublicationDateTime).getFullYear()}`,
-            false,
-          );
-          paperEntityDraft.setValue(
-            "authors",
-            item.AuthorEditorLinks
-              ? item.AuthorEditorLinks.split(" ")
-                  .map((a) => a.trim().split("|")[0]?.replace("_", " "))
-                  .filter((a) => a)
-                  .join(", ")
-              : "",
-            false,
-          );
-          paperEntityDraft.setValue("number", item.Issue, false);
-          paperEntityDraft.setValue("volume", item.VolumeNumber, false);
-          paperEntityDraft.setValue("publisher", item.PublisherName, false);
+          paperEntityDraft.publication =
+            item.JournalName?.replaceAll("_", " ") || item.ParentTitle;
+          paperEntityDraft.pubTime = `${new Date(
+            item.PublicationDateTime,
+          ).getFullYear()}`;
+          paperEntityDraft.authors = item.AuthorEditorLinks
+            ? item.AuthorEditorLinks.split(" ")
+                .map((a) => a.trim().split("|")[0]?.replace("_", " "))
+                .filter((a) => a)
+                .join(", ")
+            : "";
+          paperEntityDraft.number = item.Issue || "";
+          paperEntityDraft.volume = item.VolumeNumber;
+          paperEntityDraft.publisher = item.PublisherName;
 
           break;
         }

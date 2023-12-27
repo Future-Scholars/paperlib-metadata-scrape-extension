@@ -1,9 +1,5 @@
-import { PLAPI } from "paperlib";
+import { PLAPI, PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
 import stringSimilarity from "string-similarity";
-
-import { PaperEntity } from "@/models/paper-entity";
-import { isMetadataCompleted } from "@/utils/metadata";
-import { formatString } from "@/utils/string";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -12,7 +8,7 @@ export class CrossRefScraper extends Scraper {
     return (
       (paperEntityDraft.title !== "" || paperEntityDraft.doi !== "") &&
       !paperEntityDraft.doi.toLowerCase().includes("arxiv") &&
-      !isMetadataCompleted(paperEntityDraft)
+      !metadataUtils.isMetadataCompleted(paperEntityDraft)
     );
   }
 
@@ -38,10 +34,12 @@ export class CrossRefScraper extends Scraper {
         .pop()}</author> </query></body></query_batch>`;
     } else {
       scrapeURL = encodeURI(
-        `https://api.crossref.org/works?query.bibliographic=${formatString({
-          str: paperEntityDraft.title,
-          whiteSymbol: true,
-        })}&rows=2&mailto=hi@paperlib.app`,
+        `https://api.crossref.org/works?query.bibliographic=${stringUtils.formatString(
+          {
+            str: paperEntityDraft.title,
+            whiteSymbol: true,
+          },
+        )}&rows=2&mailto=hi@paperlib.app`,
       );
     }
 
@@ -76,14 +74,14 @@ export class CrossRefScraper extends Scraper {
     } else {
       const hitItems = parsedResponse.message as { items: HitItem[] };
       for (const item of hitItems.items) {
-        const plainHitTitle = formatString({
+        const plainHitTitle = stringUtils.formatString({
           str: item.title[0],
           removeStr: "&amp;",
           removeSymbol: true,
           lowercased: true,
         });
 
-        const existTitle = formatString({
+        const existTitle = stringUtils.formatString({
           str: paperEntityDraft.title,
           removeStr: "&amp;",
           removeSymbol: true,
@@ -102,24 +100,24 @@ export class CrossRefScraper extends Scraper {
     }
 
     if (hitItem) {
-      paperEntityDraft.setValue("title", hitItem.title[0], false, true);
-      paperEntityDraft.setValue("doi", hitItem.DOI, false);
-      paperEntityDraft.setValue("publisher", hitItem.publisher, false);
+      paperEntityDraft.title = hitItem.title[0];
+      paperEntityDraft.doi = hitItem.DOI;
+      paperEntityDraft.publisher = hitItem.publisher;
 
       if (hitItem.type?.includes("journal")) {
-        paperEntityDraft.setValue("pubType", 0, false);
+        paperEntityDraft.pubType = 0;
       } else if (
         hitItem.type?.includes("book") ||
         hitItem.type?.includes("monograph")
       ) {
-        paperEntityDraft.setValue("pubType", 3, false);
+        paperEntityDraft.pubType = 3;
       } else if (hitItem.type?.includes("proceedings")) {
-        paperEntityDraft.setValue("pubType", 1, false);
+        paperEntityDraft.pubType = 1;
       } else {
-        paperEntityDraft.setValue("pubType", 2, false);
+        paperEntityDraft.pubType = 2;
       }
 
-      paperEntityDraft.setValue("pages", hitItem.page, false);
+      paperEntityDraft.pages = hitItem.page;
 
       let publication;
       if (hitItem.type?.includes("monograph")) {
@@ -128,25 +126,14 @@ export class CrossRefScraper extends Scraper {
         publication = hitItem["container-title"]?.join(", ");
       }
 
-      paperEntityDraft.setValue(
-        "publication",
-        publication?.replaceAll("&amp;", "&") || "",
-        false,
-      );
-      paperEntityDraft.setValue(
-        "pubTime",
-        `${hitItem.published?.["date-parts"]?.[0]?.[0]}`,
-        false,
-      );
-      paperEntityDraft.setValue(
-        "authors",
-        hitItem.author
-          ?.map((author) => `${author.given} ${author.family}`)
-          .join(", "),
-        false,
-      );
-      paperEntityDraft.setValue("number", hitItem.issue, false);
-      paperEntityDraft.setValue("volume", hitItem.volume, false);
+      paperEntityDraft.publication =
+        publication?.replaceAll("&amp;", "&") || "";
+      paperEntityDraft.pubTime = `${hitItem.published?.["date-parts"]?.[0]?.[0]}`;
+      paperEntityDraft.authors = hitItem.author
+        ?.map((author) => `${author.given} ${author.family}`)
+        .join(", ");
+      paperEntityDraft.number = hitItem.issue;
+      paperEntityDraft.volume = hitItem.volume;
     }
 
     return paperEntityDraft;

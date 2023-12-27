@@ -1,7 +1,6 @@
-import { PLAPI } from "paperlib";
+import { PLAPI, PaperEntity, chunkRun, metadataUtils } from "paperlib-api";
 import Queue from "queue";
 
-import { PaperEntity } from "@/models/paper-entity";
 import { ArXivScraper } from "@/scrapers/arxiv";
 import {
   ChemRxivFuzzyScraper,
@@ -18,8 +17,6 @@ import { PubMedScraper } from "@/scrapers/pubmed";
 import { Scraper } from "@/scrapers/scraper";
 import { SemanticScholarScraper } from "@/scrapers/semanticscholar";
 import { SPIEScraper } from "@/scrapers/spie";
-import { chunkRun } from "@/utils/chunk";
-import { isMetadataCompleted, mergeMetadata } from "@/utils/metadata";
 
 const PRECISE_SCRAPERS = new Map([
   ["doi", { breakable: true, mustwait: true }],
@@ -105,7 +102,7 @@ export class MetadataScrapeService {
     const {
       results: _scrapedPaperEntityDrafts,
       errors: metadataScraperErrors,
-    } = await chunkRun<PaperEntity, PaperEntity>(
+    } = await chunkRun<PaperEntity, PaperEntity, PaperEntity>(
       paperEntityDrafts,
       async (paperEntityDraft): Promise<PaperEntity> => {
         const paperEntityDraftAndErrors = await this.scrapePMS(
@@ -126,7 +123,7 @@ export class MetadataScrapeService {
           );
         }
 
-        if (!isMetadataCompleted(paperEntityDraft)) {
+        if (!metadataUtils.isMetadataCompleted(paperEntityDraft)) {
           // 2.2 Run some force-clientside scrapers
           const paperEntityDraftAndErrors = await this.scrapeClientside(
             paperEntityDraft,
@@ -227,7 +224,7 @@ export class MetadataScrapeService {
     paperEntityDraft = draftAndErrorsPrecise.paperEntityDraft;
     errors.push(...draftAndErrorsPrecise.errors);
 
-    if (!isMetadataCompleted(paperEntityDraft)) {
+    if (!metadataUtils.isMetadataCompleted(paperEntityDraft)) {
       const draftAndErrorsFuzzy = await this._scrapeFuzzy(
         paperEntityDraft,
         scrapers,
@@ -259,7 +256,7 @@ export class MetadataScrapeService {
     scrapers: string[] = [],
     force: boolean = false,
   ): Promise<{ paperEntityDraft: PaperEntity; errors: Error[] }> {
-    if (isMetadataCompleted(paperEntityDraft)) {
+    if (metadataUtils.isMetadataCompleted(paperEntityDraft)) {
       return {
         paperEntityDraft,
         errors: [],
@@ -389,8 +386,7 @@ export class MetadataScrapeService {
         publisher: 999,
         codes: 999,
       } as { [key: string]: number };
-      const originPaperEntityDraft = new PaperEntity(false);
-      originPaperEntityDraft.initialize(paperEntityDraft);
+      const originPaperEntityDraft = new PaperEntity(paperEntityDraft);
 
       let mustwaitN = enabledScrapers.filter(
         (scraper) => scraperProps.get(scraper)?.mustwait,
@@ -408,8 +404,7 @@ export class MetadataScrapeService {
 
             let scrapedPaperEntity: PaperEntity;
             try {
-              const toBeScrapedPaperEntity = new PaperEntity(false);
-              toBeScrapedPaperEntity.initialize(paperEntityDraft);
+              const toBeScrapedPaperEntity = new PaperEntity(paperEntityDraft);
               scrapedPaperEntity = await scraperObj.scrape(
                 toBeScrapedPaperEntity,
                 force,
@@ -440,7 +435,7 @@ export class MetadataScrapeService {
           const scrapedPaperEntity = result.scrapedPaperEntity;
           const { breakable, mustwait } = scraperProps.get(result.scraper)!;
           const scraperIndex = result.scraperIndex;
-          const merged = mergeMetadata(
+          const merged = metadataUtils.mergeMetadata(
             originPaperEntityDraft,
             paperEntityDraft,
             scrapedPaperEntity,
@@ -456,7 +451,7 @@ export class MetadataScrapeService {
 
           if (
             breakable &&
-            isMetadataCompleted(paperEntityDraft) &&
+            metadataUtils.isMetadataCompleted(paperEntityDraft) &&
             mustwaitN === 0
           ) {
             q.end();

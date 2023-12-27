@@ -1,9 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
-import { PLAPI } from "paperlib";
+import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
 import stringSimilarity from "string-similarity";
-
-import { PaperEntity } from "@/models/paper-entity";
-import { formatString } from "@/utils/string";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -59,7 +56,7 @@ export class PubMedScraper extends Scraper {
   ): PaperEntity {
     const response = xmlParser.parse(rawResponse.body) as ResponseType;
 
-    const plainHitTitle = formatString({
+    const plainHitTitle = stringUtils.formatString({
       str: response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article
         .ArticleTitle,
       removeStr: "&amp;",
@@ -67,7 +64,7 @@ export class PubMedScraper extends Scraper {
       lowercased: true,
     });
 
-    const existTitle = formatString({
+    const existTitle = stringUtils.formatString({
       str: paperEntityDraft.title,
       removeStr: "&amp;",
       removeSymbol: true,
@@ -76,52 +73,27 @@ export class PubMedScraper extends Scraper {
 
     const sim = stringSimilarity.compareTwoStrings(plainHitTitle, existTitle);
     if (sim > 0.95) {
-      paperEntityDraft.setValue(
-        "title",
-        response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article
-          .ArticleTitle,
-        false,
-        true,
-      );
-      paperEntityDraft.setValue(
-        "authors",
+      paperEntityDraft.title =
+        response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.ArticleTitle;
+      paperEntityDraft.authors =
         response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.AuthorList.Author.map(
           (author) => {
             return `${author.ForeName} ${author.LastName}`;
           },
-        ).join(", "),
-      );
-      paperEntityDraft.setValue(
-        "publication",
-        response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal
-          .Title,
-      );
-      paperEntityDraft.setValue(
-        "volume",
-        `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.JournalIssue.Volume}`,
-      );
-      paperEntityDraft.setValue(
-        "number",
-        `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.JournalIssue.Issue}`,
-      );
-      paperEntityDraft.setValue(
-        "pages",
-        response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article
-          .Pagination
-          ? response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article
-              .Pagination.MedlinePgn
-          : paperEntityDraft.pages,
-      );
+        ).join(", ");
+      paperEntityDraft.publication =
+        response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.Title;
+      paperEntityDraft.volume = `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.JournalIssue.Volume}`;
+      paperEntityDraft.number = `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.JournalIssue.Issue}`;
+      paperEntityDraft.pages = response.PubmedArticleSet.PubmedArticle
+        .MedlineCitation.Article.Pagination
+        ? response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article
+            .Pagination.MedlinePgn
+        : paperEntityDraft.pages;
 
-      paperEntityDraft.setValue(
-        "doi",
-        `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.ELocationID}`,
-      );
-      paperEntityDraft.setValue("pubType", 0);
-      paperEntityDraft.setValue(
-        "pubTime",
-        `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.JournalIssue.PubDate.Year}`,
-      );
+      paperEntityDraft.doi = `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.ELocationID}`;
+      paperEntityDraft.pubType = 0;
+      paperEntityDraft.pubTime = `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.JournalIssue.PubDate.Year}`;
     }
     return paperEntityDraft;
   }

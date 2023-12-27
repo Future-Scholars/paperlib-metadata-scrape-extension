@@ -32,6 +32,9 @@ devDependencies:
   node-html-parser:
     specifier: ^6.1.11
     version: 6.1.11
+  paperlib-api:
+    specifier: 0.0.4
+    version: 0.0.4
   prettier:
     specifier: ^3.1.1
     version: 3.1.1
@@ -964,6 +967,11 @@ packages:
     hasBin: true
     dependencies:
       glob: 7.2.3
+    dev: true
+
+  /paperlib-api@0.0.4:
+    resolution: {integrity: sha512-BaJBpexbphQXu2gesrZY2thCgmsMIaiBZEsaw6PPb5e25OydX8rjusre18CvRCAfDO/VzsYVDWoOiOBIze2J3g==}
+    engines: {node: '>=16.17.1'}
     dev: true
 
   /path-is-absolute@1.0.1:

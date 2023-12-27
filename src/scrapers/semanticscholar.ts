@@ -1,9 +1,5 @@
-import { PLAPI } from "paperlib";
+import { PLAPI, PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
 import stringSimilarity from "string-similarity";
-
-import { PaperEntity } from "@/models/paper-entity";
-import { isMetadataCompleted } from "@/utils/metadata";
-import { formatString } from "@/utils/string";
 
 import { DOIScraper } from "./doi";
 import { Scraper, ScraperRequestType } from "./scraper";
@@ -35,12 +31,13 @@ interface ResponseType {
 export class SemanticScholarScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     return (
-      paperEntityDraft.title !== "" && !isMetadataCompleted(paperEntityDraft)
+      paperEntityDraft.title !== "" &&
+      !metadataUtils.isMetadataCompleted(paperEntityDraft)
     );
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
-    const scrapeURL = `https://api.semanticscholar.org/graph/v1/paper/search?query=${formatString(
+    const scrapeURL = `https://api.semanticscholar.org/graph/v1/paper/search?query=${stringUtils.formatString(
       {
         str: paperEntityDraft.title,
         whiteSymbol: true,
@@ -63,14 +60,14 @@ export class SemanticScholarScraper extends Scraper {
     }
 
     for (const item of parsedResponse.data) {
-      const plainHitTitle = formatString({
+      const plainHitTitle = stringUtils.formatString({
         str: item.title,
         removeStr: "&amp;",
         removeSymbol: true,
         lowercased: true,
       });
 
-      const existTitle = formatString({
+      const existTitle = stringUtils.formatString({
         str: paperEntityDraft.title,
         removeStr: "&amp;",
         removeSymbol: true,
@@ -85,45 +82,34 @@ export class SemanticScholarScraper extends Scraper {
           item.publicationVenue.type
         ) {
           if (item.publicationVenue.type.includes("journal")) {
-            paperEntityDraft.setValue("pubType", 0, false);
+            paperEntityDraft.pubType = 0;
           } else if (item.publicationVenue.type.includes("book")) {
-            paperEntityDraft.setValue("pubType", 3, false);
+            paperEntityDraft.pubType = 3;
           } else if (item.publicationVenue.type.includes("conference")) {
-            paperEntityDraft.setValue("pubType", 1, false);
+            paperEntityDraft.pubType = 1;
           } else {
-            paperEntityDraft.setValue("pubType", 2, false);
+            paperEntityDraft.pubType = 2;
           }
         }
 
         if (item.journal?.name) {
-          paperEntityDraft.setValue(
-            "publication",
-            item.journal.name.replaceAll("&amp;", "&"),
-            false,
+          paperEntityDraft.publication = item.journal.name.replaceAll(
+            "&amp;",
+            "&",
           );
         } else {
-          paperEntityDraft.setValue(
-            "publication",
-            item.publicationVenue?.name.replaceAll("&amp;", "&"),
-            false,
-          );
+          paperEntityDraft.publication =
+            item.publicationVenue?.name.replaceAll("&amp;", "&") || "";
         }
 
-        paperEntityDraft.setValue(
-          "pubTime",
-          item.year ? `${item.year}` : "",
-          false,
-        );
-        paperEntityDraft.setValue(
-          "authors",
-          item.authors?.map((author) => author.name).join(", "),
-          false,
-        );
-        paperEntityDraft.setValue("volume", item.journal?.volume, false);
-        paperEntityDraft.setValue("pages", item.journal?.pages, false);
+        paperEntityDraft.pubTime = item.year ? `${item.year}` : "";
+        paperEntityDraft.authors =
+          item.authors?.map((author) => author.name).join(", ") || "";
+        paperEntityDraft.volume = item.journal?.volume || "";
+        paperEntityDraft.pages = item.journal?.pages || "";
 
-        paperEntityDraft.setValue("arxiv", item.externalIds?.ArXiv, false);
-        paperEntityDraft.setValue("doi", item.externalIds?.DOI, false);
+        paperEntityDraft.arxiv = item.externalIds?.ArXiv || "";
+        paperEntityDraft.doi = item.externalIds?.DOI || "";
         break;
       }
     }
@@ -163,11 +149,7 @@ export class SemanticScholarScraper extends Scraper {
         paperEntityDraft.authors.split(", ").length <
         authorListfromSemanticScholar.length
       ) {
-        paperEntityDraft.setValue(
-          "authors",
-          authorListfromSemanticScholar.join(", "),
-          false,
-        );
+        paperEntityDraft.authors = authorListfromSemanticScholar.join(", ");
       }
     }
     return paperEntityDraft;
