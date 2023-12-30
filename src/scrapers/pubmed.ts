@@ -85,6 +85,7 @@ export class PubMedScraper extends Scraper {
         response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.Title;
       paperEntityDraft.volume = `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.JournalIssue.Volume}`;
       paperEntityDraft.number = `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.JournalIssue.Issue}`;
+      paperEntityDraft.pubTime = `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.JournalIssue.PubDate.Year}`;
       paperEntityDraft.pages = response.PubmedArticleSet.PubmedArticle
         .MedlineCitation.Article.Pagination
         ? response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article
@@ -93,7 +94,6 @@ export class PubMedScraper extends Scraper {
 
       paperEntityDraft.doi = `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.ELocationID}`;
       paperEntityDraft.pubType = 0;
-      paperEntityDraft.pubTime = `${response.PubmedArticleSet.PubmedArticle.MedlineCitation.Article.Journal.JournalIssue.PubDate.Year}`;
     }
     return paperEntityDraft;
   }

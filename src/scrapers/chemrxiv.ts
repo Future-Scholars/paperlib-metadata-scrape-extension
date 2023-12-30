@@ -1,4 +1,4 @@
-import { PLAPI, PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
+import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
 
 import stringSimilarity from "string-similarity";
 
@@ -11,7 +11,7 @@ interface ResponseType {
     vorDoi: string;
   };
   title: string;
-  statusDate: string;
+  publishedDate: string;
   authors: {
     firstName: string;
     lastName: string;
@@ -21,9 +21,7 @@ interface ResponseType {
 export class ChemRxivPreciseScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     return (
-      paperEntityDraft.doi !== "" &&
-      paperEntityDraft.doi.includes("chemrxiv") &&
-      !metadataUtils.isMetadataCompleted(paperEntityDraft)
+      paperEntityDraft.doi !== "" && paperEntityDraft.doi.includes("chemrxiv")
     );
   }
 
@@ -50,8 +48,15 @@ export class ChemRxivPreciseScraper extends Scraper {
     }
 
     for (const response of chemRxivResponses) {
+      let item: ResponseType;
+      if ((response as any).item) {
+        item = (response as any).item;
+      } else {
+        item = response;
+      }
+
       const plainHitTitle = stringUtils.formatString({
-        str: response.title,
+        str: item.title,
         removeStr: "&amp;",
         removeSymbol: true,
         lowercased: true,
@@ -66,14 +71,14 @@ export class ChemRxivPreciseScraper extends Scraper {
 
       const sim = stringSimilarity.compareTwoStrings(plainHitTitle, existTitle);
 
-      if (response.doi === paperEntityDraft.doi || sim > 0.95) {
-        paperEntityDraft.title = response.title;
-        paperEntityDraft.authors = response.authors
+      if (item.doi === paperEntityDraft.doi || sim > 0.95) {
+        paperEntityDraft.title = item.title;
+        paperEntityDraft.authors = item.authors
           .map((a) => `${a.firstName} ${a.lastName}`)
           .join(", ");
-        paperEntityDraft.pubTime = response.statusDate.slice(0, 4);
-        if (response.vor) {
-          paperEntityDraft.doi = response.vor.vorDoi;
+        paperEntityDraft.pubTime = item.publishedDate.slice(0, 4);
+        if (item.vor) {
+          paperEntityDraft.doi = item.vor.vorDoi;
         } else {
           paperEntityDraft.publication = "chemRxiv";
         }
@@ -112,10 +117,7 @@ export class ChemRxivPreciseScraper extends Scraper {
 
 export class ChemRxivFuzzyScraper extends ChemRxivPreciseScraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
-    return (
-      paperEntityDraft.title !== "" &&
-      !metadataUtils.isMetadataCompleted(paperEntityDraft)
-    );
+    return paperEntityDraft.title !== "";
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {

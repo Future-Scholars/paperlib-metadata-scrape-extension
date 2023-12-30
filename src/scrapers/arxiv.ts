@@ -1,6 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 
-import { PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
+import { PaperEntity, stringUtils } from "paperlib-api";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -20,9 +20,7 @@ interface ResponseType {
 export class ArXivScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     return (
-      paperEntityDraft.arxiv !== "" &&
-      paperEntityDraft.arxiv !== "undefined" &&
-      !metadataUtils.isMetadataCompleted(paperEntityDraft)
+      paperEntityDraft.arxiv !== "" && paperEntityDraft.arxiv !== "undefined"
     );
   }
 
@@ -50,8 +48,8 @@ export class ArXivScraper extends Scraper {
 
     if (arxivResponse) {
       const title = arxivResponse.title;
-      const authorList = arxivResponse.author;
-      let authors;
+      const authorList = arxivResponse.author || [];
+      let authors: string;
       if (Array.isArray(authorList)) {
         authors = authorList
           .map((author) => {

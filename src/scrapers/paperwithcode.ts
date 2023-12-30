@@ -1,4 +1,5 @@
 import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
+import stringSimilarity from "string-similarity";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -114,7 +115,10 @@ export class PwCScraper extends Scraper {
           lowercased: true,
         });
 
-        if (hitTitle === targetTitle && result.repository) {
+        if (
+          stringSimilarity.compareTwoStrings(hitTitle, targetTitle) > 0.98 &&
+          result.repository
+        ) {
           id = result.paper.id;
           break;
         }

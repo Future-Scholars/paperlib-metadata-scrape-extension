@@ -1,4 +1,4 @@
-import { PLAPI, PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
+import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
 import stringSimilarity from "string-similarity";
 
 import { DOIScraper } from "./doi";
@@ -30,10 +30,7 @@ interface ResponseType {
 
 export class SemanticScholarScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
-    return (
-      paperEntityDraft.title !== "" &&
-      !metadataUtils.isMetadataCompleted(paperEntityDraft)
-    );
+    return paperEntityDraft.title !== "";
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
@@ -90,16 +87,11 @@ export class SemanticScholarScraper extends Scraper {
           } else {
             paperEntityDraft.pubType = 2;
           }
-        }
 
-        if (item.journal?.name) {
-          paperEntityDraft.publication = item.journal.name.replaceAll(
+          paperEntityDraft.publication = item.publicationVenue.name.replaceAll(
             "&amp;",
             "&",
           );
-        } else {
-          paperEntityDraft.publication =
-            item.publicationVenue?.name.replaceAll("&amp;", "&") || "";
         }
 
         paperEntityDraft.pubTime = item.year ? `${item.year}` : "";

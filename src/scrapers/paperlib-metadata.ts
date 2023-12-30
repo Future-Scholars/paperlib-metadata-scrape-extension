@@ -90,10 +90,6 @@ export class PaperlibMetadataServiceScraper {
 
     let { scrapeURL, headers } = this.preProcess(paperEntityDraft, scrapers);
 
-    if (force) {
-      scrapeURL += "&force=true";
-    }
-
     const response = (await PLAPI.networkTool.get(
       scrapeURL,
       headers,

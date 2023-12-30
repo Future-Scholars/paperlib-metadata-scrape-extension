@@ -1,4 +1,4 @@
-import { PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
+import { PaperEntity, stringUtils } from "paperlib-api";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 
@@ -20,10 +20,7 @@ interface ResponseType {
 
 export class DOIScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
-    return (
-      paperEntityDraft.doi !== "" &&
-      !metadataUtils.isMetadataCompleted(paperEntityDraft)
-    );
+    return paperEntityDraft.doi !== "";
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
@@ -67,9 +64,16 @@ export class DOIScraper extends Scraper {
           })
           .join(", ")
       : "";
-    const pubTime = response.published
-      ? response.published["date-parts"]["0"][0]
-      : "";
+
+    let pubTime = "";
+    try {
+      pubTime = response["published-print"]["date-parts"][0][0];
+    } catch (e) {
+      pubTime = response.published
+        ? response.published["date-parts"]["0"][0]
+        : "";
+    }
+
     let pubType;
     if (response.type == "proceedings-article") {
       pubType = 1;

@@ -1,4 +1,4 @@
-import { PLAPI, PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
+import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
 
 import { bibtex2json } from "@/utils/bibtex";
 
@@ -37,8 +37,7 @@ interface ResponseType {
 export class DBLPScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     return (
-      paperEntityDraft.title.replaceAll("&amp;", "").replaceAll("&", "") !==
-        "" && !metadataUtils.isMetadataCompleted(paperEntityDraft)
+      paperEntityDraft.title.replaceAll("&amp;", "").replaceAll("&", "") !== ""
     );
   }
 
@@ -185,11 +184,8 @@ export class DBLPScraper extends Scraper {
     return rawSearchResponse;
   }
 
-  static async scrape(
-    paperEntityDraft: PaperEntity,
-    force = false,
-  ): Promise<PaperEntity> {
-    if (!this.checkEnable(paperEntityDraft) && !force) {
+  static async scrape(paperEntityDraft: PaperEntity): Promise<PaperEntity> {
+    if (!this.checkEnable(paperEntityDraft)) {
       return paperEntityDraft;
     }
 

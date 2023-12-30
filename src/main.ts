@@ -32,6 +32,7 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
             general: "General",
             cs: "Computer Science",
             es: "Earth Science",
+            phy: "Physics",
           },
           value: "general",
           order: 0,
@@ -99,13 +100,6 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
           value: true,
           order: 1,
         },
-        "scraper-spie": {
-          type: "boolean",
-          name: "SPIE",
-          description: "spiedigitallibrary.org",
-          value: false,
-          order: 1,
-        },
         "scraper-ieee": {
           type: "boolean",
           name: "IEEE xplore",
@@ -128,24 +122,6 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
     this.disposeCallbacks = [];
   }
 
-  private _registerContextMenu() {
-    const enabledScrapers: { [id: string]: string } = {};
-
-    const scraperPref: Record<string, IScraperPreference> =
-      PLExtAPI.extensionPreferenceService.getAll(this.id);
-
-    for (const [id, pref] of Object.entries(scraperPref)) {
-      if (id.startsWith("scraper-") && pref.value) {
-        enabledScrapers[id] = pref.name;
-      }
-    }
-
-    PLMainAPI.contextMenuService.registerScraperExtension(
-      this.id,
-      enabledScrapers,
-    );
-  }
-
   async initialize() {
     await PLExtAPI.extensionPreferenceService.register(
       this.id,
@@ -154,11 +130,9 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
 
     this.disposeCallbacks.push(
       PLExtAPI.extensionPreferenceService.onChanged(
-        this.id,
-        "presetting",
+        `${this.id}:presetting`,
         (newValue) => {
-          // TODO: implement here
-          console.log("presetting changed", newValue);
+          this.setPresetting(newValue.value.value);
         },
       ),
     );
@@ -176,6 +150,24 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
     }
     PLExtAPI.extensionPreferenceService.unregister(this.id);
     PLMainAPI.contextMenuService.unregisterScraperExtension(this.id);
+  }
+
+  private _registerContextMenu() {
+    const enabledScrapers: { [id: string]: string } = {};
+
+    const scraperPref: Map<string, IScraperPreference> =
+      PLExtAPI.extensionPreferenceService.getAll(this.id);
+
+    for (const [id, pref] of Object.entries(scraperPref)) {
+      if (id.startsWith("scraper-") && pref.value) {
+        enabledScrapers[id] = pref.name;
+      }
+    }
+
+    PLMainAPI.contextMenuService.registerScraperExtension(
+      this.id,
+      enabledScrapers,
+    );
   }
 
   async scrapeMetadata(
@@ -206,11 +198,11 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
         );
       }
     } else {
-      const scraperPref: Record<string, IScraperPreference> =
+      const scraperPref: Map<string, IScraperPreference> =
         PLExtAPI.extensionPreferenceService.getAll(this.id);
 
-      for (const [id, pref] of Object.entries(scraperPref)) {
-        if (pref.value && id.startsWith("scraper-")) {
+      for (const [id, pref] of scraperPref.entries()) {
+        if (pref && id.startsWith("scraper-")) {
           scrapers.push(id);
         }
       }
@@ -223,18 +215,67 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
       scrapers = scrapers.filter((scraper) => scraper !== "chemrxiv");
     }
 
-    // TODO: Add scraper specific params
     const scrapedPaperEntityDrafts = await this._metadataScrapeService.scrape(
       paperEntityDrafts.map((paperEntityDraft) => {
         return new PaperEntity(paperEntityDraft);
       }),
-      specificScrapers,
+      scrapers,
       force,
     );
 
     console.timeEnd("scrapeMetadata");
 
     return [scrapedPaperEntityDrafts, specificScrapers, force];
+  }
+
+  setPresetting(presetting: string) {
+    if (!["general", "cs", "es", "phy"].includes(presetting)) {
+      return;
+    }
+
+    if (presetting === "general" || presetting === "cs") {
+      PLExtAPI.extensionPreferenceService.set(this.id, {
+        "scraper-arxiv": true,
+        "scraper-chemrxiv": false,
+        "scraper-crossref": true,
+        "scraper-dblp": true,
+        "scraper-doi": true,
+        "scraper-openreview": true,
+        "scraper-pwc": true,
+        "scraper-pubmed": false,
+        "scraper-semanticscholar": true,
+        "scraper-spie": false,
+        "scraper-ieee": false,
+      });
+    } else if (presetting === "es") {
+      PLExtAPI.extensionPreferenceService.set(this.id, {
+        "scraper-arxiv": false,
+        "scraper-chemrxiv": false,
+        "scraper-crossref": true,
+        "scraper-dblp": false,
+        "scraper-doi": true,
+        "scraper-openreview": false,
+        "scraper-pwc": false,
+        "scraper-pubmed": false,
+        "scraper-semanticscholar": true,
+        "scraper-spie": false,
+        "scraper-ieee": false,
+      });
+    } else if (presetting === "phy") {
+      PLExtAPI.extensionPreferenceService.set(this.id, {
+        "scraper-arxiv": true,
+        "scraper-chemrxiv": false,
+        "scraper-crossref": true,
+        "scraper-dblp": false,
+        "scraper-doi": true,
+        "scraper-openreview": false,
+        "scraper-pwc": false,
+        "scraper-pubmed": false,
+        "scraper-semanticscholar": true,
+        "scraper-spie": true,
+        "scraper-ieee": false,
+      });
+    }
   }
 }
 

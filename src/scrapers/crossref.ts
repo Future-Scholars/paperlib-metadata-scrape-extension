@@ -1,4 +1,4 @@
-import { PLAPI, PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
+import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
 import stringSimilarity from "string-similarity";
 
 import { Scraper, ScraperRequestType } from "./scraper";
@@ -7,8 +7,7 @@ export class CrossRefScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     return (
       (paperEntityDraft.title !== "" || paperEntityDraft.doi !== "") &&
-      !paperEntityDraft.doi.toLowerCase().includes("arxiv") &&
-      !metadataUtils.isMetadataCompleted(paperEntityDraft)
+      !paperEntityDraft.doi.toLowerCase().includes("arxiv")
     );
   }
 
@@ -25,9 +24,10 @@ export class CrossRefScraper extends Scraper {
       paperEntityDraft.title !== "" &&
       paperEntityDraft.authors !== ""
     ) {
-      scrapeURL = `https://doi.crossref.org/servlet/query?usr=hi@paperlib.app&qdata=<?xml version = "1.0" encoding="UTF-8"?><query_batch xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.0" xmlns="http://www.crossref.org/qschema/2.0"  xsi:schemaLocation="http://www.crossref.org/qschema/2.0 http://www.crossref.org/qschema/crossref_query_input2.0.xsd"><head><email_address>support@crossref.org</email_address><doi_batch_id>ABC_123_fff</doi_batch_id> </head> <body> <query enable-multiple-hits="false" secondary-query="author-title" key="key1"> <article_title match="fuzzy">${
-        paperEntityDraft.title
-      }</article_title> <author search-all-authors="true">${paperEntityDraft.authors
+      scrapeURL = `https://doi.crossref.org/servlet/query?usr=hi@paperlib.app&qdata=<?xml version = "1.0" encoding="UTF-8"?><query_batch xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.0" xmlns="http://www.crossref.org/qschema/2.0"  xsi:schemaLocation="http://www.crossref.org/qschema/2.0 http://www.crossref.org/qschema/crossref_query_input2.0.xsd"><head><email_address>support@crossref.org</email_address><doi_batch_id>ABC_123_fff</doi_batch_id> </head> <body> <query enable-multiple-hits="false" secondary-query="author-title" key="key1"> <article_title match="fuzzy">${paperEntityDraft.title.replaceAll(
+        "&",
+        "",
+      )}</article_title> <author search-all-authors="true">${paperEntityDraft.authors
         .split(",")[0]
         .trim()
         .split(" ")
@@ -44,7 +44,6 @@ export class CrossRefScraper extends Scraper {
     }
 
     const headers = {};
-
     return { scrapeURL, headers };
   }
 
@@ -128,7 +127,15 @@ export class CrossRefScraper extends Scraper {
 
       paperEntityDraft.publication =
         publication?.replaceAll("&amp;", "&") || "";
-      paperEntityDraft.pubTime = `${hitItem.published?.["date-parts"]?.[0]?.[0]}`;
+
+      let pubTime = "";
+      try {
+        pubTime = hitItem["published-print"]["date-parts"][0][0];
+      } catch (e) {
+        pubTime = `${hitItem.published?.["date-parts"]?.[0]?.[0]}`;
+      }
+
+      paperEntityDraft.pubTime = `${pubTime}`;
       paperEntityDraft.authors = hitItem.author
         ?.map((author) => `${author.given} ${author.family}`)
         .join(", ");
@@ -139,11 +146,8 @@ export class CrossRefScraper extends Scraper {
     return paperEntityDraft;
   }
 
-  static async scrape(
-    paperEntityDraft: PaperEntity,
-    force = false,
-  ): Promise<PaperEntity> {
-    if (!this.checkEnable(paperEntityDraft) && !force) {
+  static async scrape(paperEntityDraft: PaperEntity): Promise<PaperEntity> {
+    if (!this.checkEnable(paperEntityDraft)) {
       return paperEntityDraft;
     }
 

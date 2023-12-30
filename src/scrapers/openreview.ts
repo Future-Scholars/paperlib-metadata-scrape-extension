@@ -1,4 +1,4 @@
-import { PLAPI, PaperEntity, metadataUtils, stringUtils } from "paperlib-api";
+import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
 import stringSimilarity from "string-similarity";
 
 import { bibtex2json } from "@/utils/bibtex";
@@ -20,10 +20,7 @@ interface ResponseType {
 
 export class OpenreviewScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
-    return (
-      paperEntityDraft.title !== "" &&
-      !metadataUtils.isMetadataCompleted(paperEntityDraft)
-    );
+    return paperEntityDraft.title !== "";
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
@@ -65,7 +62,6 @@ export class OpenreviewScraper extends Scraper {
         paperEntityDraft.title = title;
         paperEntityDraft.authors = authors;
 
-        console.log(note.content);
         if (note.content.venue) {
           if (
             !note.content.venue.includes("Submitted") &&
