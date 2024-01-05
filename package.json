@@ -5,6 +5,7 @@
   "description": "This extension scrapes the metadata for a paper from the web database for Paperlib.",
   "main": "dist/main.js",
   "type": "commonjs",
+  "manifest_version": "1.0.0",
   "scripts": {
     "prebuild": "tsc --noEmit",
     "build": "tsc --noEmit && vite build"
