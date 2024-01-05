@@ -16,11 +16,10 @@ export default defineConfig({
     lib: {
       entry: path.resolve(__dirname, "src/main.ts"),
       fileName: "main",
-      name: "PaperlibEntryScrapeExtension",
       formats: ["cjs"],
     },
     rollupOptions: {
-      external: [...builtinModules, "paperlib"],
+      external: [...builtinModules],
       output: {
         format: "cjs",
       },
@@ -41,7 +40,7 @@ export default defineConfig({
   plugins: [
     commonjs(),
     modify({
-      find: /import\s*{\s*[\s\S]*}\s*from\s*"paperlib-api";?/,
+      find: /import\s*{\s*[\s\S]*}\s*from\s*"paperlib-api?/,
       // find: /import { PLAPI } from "paperlib";/,
       replace: (match, path) => {
         const m = match

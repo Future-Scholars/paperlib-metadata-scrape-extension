@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 
-import { PaperEntity, stringUtils } from "paperlib-api";
+import { PaperEntity } from "paperlib-api/model";
+import { stringUtils } from "paperlib-api/utils";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 

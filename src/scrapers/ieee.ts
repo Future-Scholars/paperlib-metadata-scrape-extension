@@ -1,9 +1,6 @@
-import {
-  PLExtAPI,
-  PaperEntity,
-  metadataUtils,
-  stringUtils,
-} from "paperlib-api";
+import { PLExtAPI } from "paperlib-api/api";
+import { PaperEntity } from "paperlib-api/model";
+import { metadataUtils, stringUtils } from "paperlib-api/utils";
 
 import { Scraper, ScraperRequestType } from "./scraper";
 

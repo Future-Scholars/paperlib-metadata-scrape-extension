@@ -1,4 +1,6 @@
-import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
+import { PLAPI } from "paperlib-api";
+import { PaperEntity } from "paperlib-api/model";
+import { stringUtils } from "paperlib-api/utils";
 
 import { bibtex2json } from "@/utils/bibtex";
 

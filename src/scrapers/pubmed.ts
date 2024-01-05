@@ -1,5 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
-import { PLAPI, PaperEntity, stringUtils } from "paperlib-api";
+import { PLAPI } from "paperlib-api/api";
+import { PaperEntity } from "paperlib-api/model";
+import { stringUtils } from "paperlib-api/utils";
 import stringSimilarity from "string-similarity";
 
 import { Scraper, ScraperRequestType } from "./scraper";

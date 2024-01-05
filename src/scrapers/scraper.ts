@@ -1,4 +1,6 @@
-import { PLAPI, PaperEntity, metadataUtils } from "paperlib-api";
+import { PLAPI } from "paperlib-api/api";
+import { PaperEntity } from "paperlib-api/model";
+import { metadataUtils } from "paperlib-api/utils";
 
 export interface ScraperRequestType {
   scrapeURL: string;

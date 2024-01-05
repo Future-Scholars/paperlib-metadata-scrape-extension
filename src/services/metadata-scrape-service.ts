@@ -1,4 +1,6 @@
-import { PLAPI, PaperEntity, chunkRun, metadataUtils } from "paperlib-api";
+import { PLAPI } from "paperlib-api/api";
+import { PaperEntity } from "paperlib-api/model";
+import { chunkRun, metadataUtils } from "paperlib-api/utils";
 import Queue from "queue";
 
 import { ArXivScraper } from "@/scrapers/arxiv";

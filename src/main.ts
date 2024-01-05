@@ -1,10 +1,5 @@
-import {
-  PLAPI,
-  PLExtAPI,
-  PLExtension,
-  PLMainAPI,
-  PaperEntity,
-} from "paperlib-api";
+import { PLAPI, PLExtAPI, PLExtension, PLMainAPI } from "paperlib-api/api";
+import { PaperEntity } from "paperlib-api/model";
 
 import { MetadataScrapeService } from "@/services/metadata-scrape-service";
 
