@@ -151,9 +151,11 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
     const enabledScrapers: { [id: string]: string } = {};
 
     const scraperPref: Map<string, IScraperPreference> =
-      PLExtAPI.extensionPreferenceService.getAll(this.id);
+      PLExtAPI.extensionPreferenceService.getAllMetadata(this.id);
 
-    for (const [id, pref] of Object.entries(scraperPref)) {
+    console.log(scraperPref);
+
+    for (const [id, pref] of scraperPref.entries()) {
       if (id.startsWith("scraper-") && pref.value) {
         enabledScrapers[id] = pref.name;
       }
@@ -194,10 +196,10 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
       }
     } else {
       const scraperPref: Map<string, IScraperPreference> =
-        PLExtAPI.extensionPreferenceService.getAll(this.id);
+        PLExtAPI.extensionPreferenceService.getAllMetadata(this.id);
 
       for (const [id, pref] of scraperPref.entries()) {
-        if (pref && id.startsWith("scraper-")) {
+        if (pref.value && id.startsWith("scraper-")) {
           scrapers.push(id);
         }
       }
