@@ -1,6 +1,6 @@
 {
   "name": "@future-scholars/paperlib-metadata-scrape-extension",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "author": "Paperlib",
   "description": "This extension scrapes the metadata for a paper from the web database for Paperlib.",
   "main": "dist/main.js",

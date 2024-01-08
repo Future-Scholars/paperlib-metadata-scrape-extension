@@ -95,18 +95,26 @@ export class MetadataScrapeService {
     scrapers: string[],
     force: boolean = false,
   ): Promise<PaperEntity[]> {
+    let completedPaperEntityDrafts: PaperEntity[] = [];
+    let incompletePaperEntityDrafts: PaperEntity[] = [];
+
     if (!force) {
-      paperEntityDrafts = paperEntityDrafts.filter(
-        (paperEntityDraft) =>
-          !metadataUtils.isMetadataCompleted(paperEntityDraft),
-      );
+      for (const paperEntityDraft of paperEntityDrafts) {
+        if (!metadataUtils.isMetadataCompleted(paperEntityDraft)) {
+          incompletePaperEntityDrafts.push(paperEntityDraft);
+        } else {
+          completedPaperEntityDrafts.push(paperEntityDraft);
+        }
+      }
+    } else {
+      incompletePaperEntityDrafts = paperEntityDrafts;
     }
 
     const {
       results: _scrapedPaperEntityDrafts,
       errors: metadataScraperErrors,
     } = await chunkRun<PaperEntity, PaperEntity, PaperEntity>(
-      paperEntityDrafts,
+      incompletePaperEntityDrafts,
       async (paperEntityDraft): Promise<PaperEntity> => {
         const paperEntityDraftAndErrors = await this.scrapePMS(
           paperEntityDraft,
@@ -160,7 +168,7 @@ export class MetadataScrapeService {
     }
     let scrapedPaperEntityDrafts = _scrapedPaperEntityDrafts.flat();
 
-    return scrapedPaperEntityDrafts;
+    return [...completedPaperEntityDrafts, ...scrapedPaperEntityDrafts];
   }
 
   /**
