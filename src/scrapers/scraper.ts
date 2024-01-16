@@ -1,4 +1,4 @@
-import { PLAPI } from "paperlib-api/api";
+import { PLExtAPI } from "paperlib-api/api";
 import { PaperEntity } from "paperlib-api/model";
 import { metadataUtils } from "paperlib-api/utils";
 
@@ -18,7 +18,14 @@ export class Scraper {
 
     const { scrapeURL, headers } = this.preProcess(paperEntityDraft);
 
-    const response = await PLAPI.networkTool.get(scrapeURL, headers, 1, 10000);
+    const response = await PLExtAPI.networkTool.get(
+      scrapeURL,
+      headers,
+      1,
+      10000,
+      false,
+      true,
+    );
     return this.parsingProcess(response, paperEntityDraft);
   }
 

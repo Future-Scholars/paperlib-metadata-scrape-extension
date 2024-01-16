@@ -1,4 +1,4 @@
-import { PLAPI } from "paperlib-api";
+import { PLExtAPI } from "paperlib-api/api";
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
 import stringSimilarity from "string-similarity";
@@ -50,18 +50,18 @@ export class CrossRefScraper extends Scraper {
   }
 
   static parsingProcess(
-    rawResponse: { body: string },
+    rawResponse: { body: any },
     paperEntityDraft: PaperEntity,
     fromDOI = false,
   ): PaperEntity {
     let parsedResponse;
 
     if (fromDOI) {
-      parsedResponse = JSON.parse(rawResponse.body) as {
+      parsedResponse = rawResponse.body as {
         message: HitItem;
       };
     } else {
-      parsedResponse = JSON.parse(rawResponse.body) as {
+      parsedResponse = rawResponse.body as {
         message: {
           items: HitItem[];
         };
@@ -156,38 +156,44 @@ export class CrossRefScraper extends Scraper {
     const { scrapeURL, headers } = this.preProcess(paperEntityDraft);
 
     if (scrapeURL.startsWith("https://api.crossref.org")) {
-      const response = (await PLAPI.networkTool.get(
+      const response = await PLExtAPI.networkTool.get(
         scrapeURL,
         headers,
         1,
         10000,
-      )) as { body: string };
+        false,
+        true,
+      );
       return this.parsingProcess(
         response,
         paperEntityDraft,
         !scrapeURL.includes("bibliographic"),
       );
     } else {
-      const response = (await PLAPI.networkTool.get(
+      const response = await PLExtAPI.networkTool.get(
         scrapeURL,
         headers,
         1,
         10000,
-      )) as { body: string };
+        false,
+        true,
+      );
 
-      const potentialDOI = response.body
+      const potentialDOI = JSON.stringify(response.body)
         .split("|")
         .pop()
         ?.match(/10.\d{4,9}\/[-._;()/:A-Z0-9]+/gim);
       if (!potentialDOI) {
         return paperEntityDraft;
       } else {
-        const response = (await PLAPI.networkTool.get(
+        const response = await PLExtAPI.networkTool.get(
           `https://api.crossref.org/works/${potentialDOI[0]}`,
           headers,
           1,
           10000,
-        )) as { body: string };
+          false,
+          true,
+        );
         return this.parsingProcess(response, paperEntityDraft, true);
       }
     }

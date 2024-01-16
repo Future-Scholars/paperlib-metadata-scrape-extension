@@ -1,4 +1,4 @@
-import { PLAPI } from "paperlib-api/api";
+import { PLExtAPI } from "paperlib-api/api";
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
 
@@ -60,10 +60,10 @@ export class PaperlibMetadataServiceScraper {
   }
 
   static parsingProcess(
-    rawResponse: { body: string; headers: Record<string, string> },
+    rawResponse: { body: ResponseType; headers: Record<string, string> },
     paperEntityDraft: PaperEntity,
   ): PaperEntity {
-    const response = JSON.parse(rawResponse.body) as ResponseType;
+    const response = rawResponse.body;
 
     paperEntityDraft.title = response.title;
     paperEntityDraft.authors = response.authors;
@@ -92,12 +92,14 @@ export class PaperlibMetadataServiceScraper {
 
     let { scrapeURL, headers } = this.preProcess(paperEntityDraft, scrapers);
 
-    const response = (await PLAPI.networkTool.get(
+    const response = await PLExtAPI.networkTool.get(
       scrapeURL,
       headers,
       1,
       15000,
-    )) as { body: string; headers: Record<string, string> };
+      false,
+      true,
+    );
     return this.parsingProcess(response, paperEntityDraft);
   }
 }

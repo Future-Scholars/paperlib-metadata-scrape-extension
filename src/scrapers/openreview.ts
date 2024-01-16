@@ -1,4 +1,4 @@
-import { PLAPI } from "paperlib-api/api";
+import { PLExtAPI } from "paperlib-api/api";
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
 import stringSimilarity from "string-similarity";
@@ -36,10 +36,10 @@ export class OpenreviewScraper extends Scraper {
   }
 
   static parsingProcess(
-    rawResponse: { body: string },
+    rawResponse: { body: ResponseType },
     paperEntityDraft: PaperEntity,
   ): PaperEntity {
-    const notes = (JSON.parse(rawResponse.body) as ResponseType).notes;
+    const notes = rawResponse.body.notes;
 
     for (const note of notes) {
       const plainHitTitle = stringUtils.formatString({
@@ -142,12 +142,14 @@ export class OpenreviewScraper extends Scraper {
 
     const { scrapeURL, headers } = this.preProcess(paperEntityDraft);
 
-    const response = (await PLAPI.networkTool.get(
+    const response = await PLExtAPI.networkTool.get(
       scrapeURL,
       headers,
       1,
       5000,
-    )) as { body: string };
+      false,
+      true,
+    );
     paperEntityDraft = this.parsingProcess(response, paperEntityDraft);
 
     if (paperEntityDraft.publication.includes("dblp")) {

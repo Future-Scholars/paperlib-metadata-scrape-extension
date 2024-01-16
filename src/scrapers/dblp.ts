@@ -1,9 +1,9 @@
-import { PLAPI } from "paperlib-api";
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
 
 import { bibtex2json } from "@/utils/bibtex";
 
+import { PLExtAPI } from "paperlib-api";
 import { Scraper, ScraperRequestType } from "./scraper";
 
 interface ResponseType {
@@ -63,10 +63,10 @@ export class DBLPScraper extends Scraper {
   }
 
   static parsingProcess(
-    rawResponse: { body: string },
+    rawResponse: { body: ResponseType },
     paperEntityDraft: PaperEntity,
   ): PaperEntity {
-    const response = JSON.parse(rawResponse.body) as ResponseType;
+    const response = rawResponse.body;
 
     if (response.result.hits["@sent"] > 0) {
       for (const hit of response.result.hits.hit) {
@@ -164,11 +164,16 @@ export class DBLPScraper extends Scraper {
     scrapeURL: string,
     headers: Record<string, string>,
   ) {
-    let rawSearchResponse: { body: string } | null;
+    let rawSearchResponse: { body: any } | null;
     try {
-      rawSearchResponse = (await PLAPI.networkTool.get(scrapeURL, headers)) as {
-        body: string;
-      };
+      rawSearchResponse = await PLExtAPI.networkTool.get(
+        scrapeURL,
+        headers,
+        1,
+        10000,
+        false,
+        true,
+      );
     } catch (e) {
       console.error(e);
       rawSearchResponse = null;
@@ -177,10 +182,14 @@ export class DBLPScraper extends Scraper {
     if (!rawSearchResponse) {
       // Try an alternative URL
       const alternativeURL = scrapeURL.replace("dblp.org", "dblp.uni-trier.de");
-      rawSearchResponse = (await PLAPI.networkTool.get(
+      rawSearchResponse = await PLExtAPI.networkTool.get(
         alternativeURL,
         headers,
-      )) as { body: string };
+        1,
+        10000,
+        false,
+        true,
+      );
     }
 
     return rawSearchResponse;

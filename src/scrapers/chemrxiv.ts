@@ -1,4 +1,4 @@
-import { PLAPI } from "paperlib-api";
+import { PLExtAPI } from "paperlib-api/api";
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
 
@@ -35,12 +35,10 @@ export class ChemRxivPreciseScraper extends Scraper {
   }
 
   static parsingProcess(
-    rawResponse: { body: string },
+    rawResponse: { body: ResponseType | { itemHits: ResponseType[] } },
     paperEntityDraft: PaperEntity,
   ): PaperEntity {
-    const parsedResponse = JSON.parse(rawResponse.body) as
-      | ResponseType
-      | { itemHits: ResponseType[] };
+    const parsedResponse = rawResponse.body;
     let chemRxivResponses: ResponseType[];
     if (parsedResponse.hasOwnProperty("itemHits")) {
       chemRxivResponses = (parsedResponse as { itemHits: ResponseType[] })
@@ -100,12 +98,14 @@ export class ChemRxivPreciseScraper extends Scraper {
 
     const { scrapeURL, headers } = this.preProcess(paperEntityDraft);
 
-    const response = (await PLAPI.networkTool.get(
+    const response = await PLExtAPI.networkTool.get(
       scrapeURL,
       headers,
       1,
       5000,
-    )) as { body: string };
+      false,
+      true,
+    );
     paperEntityDraft = this.parsingProcess(
       response,
       paperEntityDraft,

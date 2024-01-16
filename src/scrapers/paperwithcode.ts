@@ -1,4 +1,4 @@
-import { PLAPI } from "paperlib-api/api";
+import { PLExtAPI } from "paperlib-api/api";
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
 import stringSimilarity from "string-similarity";
@@ -39,10 +39,10 @@ export class PwCScraper extends Scraper {
   }
 
   static parsingProcess(
-    rawResponse: { body: string },
+    rawResponse: { body: ResponseType },
     paperEntityDraft: PaperEntity,
   ): PaperEntity {
-    const response = JSON.parse(rawResponse.body) as ResponseType;
+    const response = rawResponse.body;
 
     if (response.count) {
       let codeList: string[] = [];
@@ -82,12 +82,16 @@ export class PwCScraper extends Scraper {
 
     const { scrapeURL, headers } = this.preProcess(paperEntityDraft);
 
-    const rawSearchResponse = (await PLAPI.networkTool.get(
+    const rawSearchResponse = await PLExtAPI.networkTool.get(
       scrapeURL,
       headers,
-    )) as { body: string };
+      1,
+      10000,
+      false,
+      true,
+    );
 
-    const searchResponse = JSON.parse(rawSearchResponse.body) as {
+    const searchResponse = rawSearchResponse.body as {
       count?: number;
       results: {
         paper: {
@@ -128,10 +132,14 @@ export class PwCScraper extends Scraper {
     }
 
     if (id) {
-      const rawRepoResponse = (await PLAPI.networkTool.get(
+      const rawRepoResponse = await PLExtAPI.networkTool.get(
         `https://paperswithcode.com/api/v1/papers/${id}/repositories/`,
         headers,
-      )) as { body: string };
+        1,
+        10000,
+        false,
+        true,
+      );
 
       return this.parsingProcess(rawRepoResponse, paperEntityDraft);
     } else {

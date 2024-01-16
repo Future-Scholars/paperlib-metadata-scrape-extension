@@ -1,4 +1,4 @@
-import { PLAPI } from "paperlib-api/api";
+import { PLExtAPI } from "paperlib-api/api";
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
 import stringSimilarity from "string-similarity";
@@ -49,10 +49,10 @@ export class SemanticScholarScraper extends Scraper {
   }
 
   static parsingProcess(
-    rawResponse: { body: string },
+    rawResponse: { body: ResponseType },
     paperEntityDraft: PaperEntity,
   ): PaperEntity {
-    const parsedResponse = JSON.parse(rawResponse.body) as ResponseType;
+    const parsedResponse = rawResponse.body;
 
     if (parsedResponse.total === 0) {
       return paperEntityDraft;
@@ -121,12 +121,14 @@ export class SemanticScholarScraper extends Scraper {
 
     const { scrapeURL, headers } = this.preProcess(paperEntityDraft);
 
-    const response = (await PLAPI.networkTool.get(
+    const response = await PLExtAPI.networkTool.get(
       scrapeURL,
       headers,
       1,
-      5000,
-    )) as { body: string };
+      10000,
+      false,
+      true,
+    );
     paperEntityDraft = this.parsingProcess(
       response,
       paperEntityDraft,

@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import { PLAPI } from "paperlib-api/api";
+import { PLExtAPI } from "paperlib-api/api";
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
 import stringSimilarity from "string-similarity";
@@ -112,12 +112,16 @@ export class PubMedScraper extends Scraper {
       paperEntityDraft,
     ) as ScraperRequestType;
 
-    const rawSearchResponse = (await PLAPI.networkTool.get(
+    const rawSearchResponse = await PLExtAPI.networkTool.get(
       scrapeURL,
       headers,
-    )) as { body: string };
+      1,
+      10000,
+      false,
+      true,
+    );
 
-    const searchResponse = JSON.parse(rawSearchResponse.body) as {
+    const searchResponse = rawSearchResponse.body as {
       esearchresult: {
         idlist: string[];
       };
@@ -127,10 +131,14 @@ export class PubMedScraper extends Scraper {
       const id = searchResponse.esearchresult.idlist[0];
 
       if (id) {
-        const rawRepoResponse = (await PLAPI.networkTool.get(
+        const rawRepoResponse = await PLExtAPI.networkTool.get(
           `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&retmode=xml&retmax=20&sort=relevance&id=${id}`,
           headers,
-        )) as { body: string };
+          1,
+          10000,
+          false,
+          true,
+        );
 
         return this.parsingProcess(rawRepoResponse, paperEntityDraft);
       } else {
