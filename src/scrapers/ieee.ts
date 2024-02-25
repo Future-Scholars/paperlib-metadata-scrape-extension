@@ -27,7 +27,7 @@ export class IEEEScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     const IEEEAPIKey =
       (PLExtAPI.extensionPreferenceService.get(
-        "paperlib-metadata-scrape-extension",
+        "@future-scholars/paperlib-metadata-scrape-extension",
         "ieee-scrapers-api-key",
       ) as string) || "";
 
@@ -41,7 +41,7 @@ export class IEEEScraper extends Scraper {
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
     const IEEEAPIKey =
       (PLExtAPI.extensionPreferenceService.get(
-        "paperlib-metadata-scrape-extension",
+        "@future-scholars/paperlib-metadata-scrape-extension",
         "ieee-scrapers-api-key",
       ) as string) || "";
 
