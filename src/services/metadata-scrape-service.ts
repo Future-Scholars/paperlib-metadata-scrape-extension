@@ -110,6 +110,17 @@ export class MetadataScrapeService {
       incompletePaperEntityDrafts = paperEntityDrafts;
     }
 
+    const randomId = Math.random().toString(36).substring(7);
+    let completedNum = 0;
+    const totalNum = incompletePaperEntityDrafts.length;
+    PLAPI.logService.progress(
+      `Metadata Scraping ${completedNum}/${totalNum}...`,
+      (completedNum / totalNum) * 100,
+      true,
+      "MetadataScrapeExt",
+      randomId,
+    );
+
     const {
       results: _scrapedPaperEntityDrafts,
       errors: metadataScraperErrors,
@@ -151,11 +162,37 @@ export class MetadataScrapeService {
           }
         }
 
+        completedNum += 1;
+        PLAPI.logService.progress(
+          `Metadata Scraping ${completedNum}/${totalNum}...`,
+          (completedNum / totalNum) * 100,
+          true,
+          "MetadataScrapeExt",
+          randomId,
+        );
+
         return paperEntityDraft;
       },
       async (paperEntityDraft): Promise<PaperEntity> => {
+        completedNum += 1;
+        PLAPI.logService.progress(
+          `Metadata Scraping ${completedNum}/${totalNum}...`,
+          (completedNum / totalNum) * 100,
+          true,
+          "MetadataScrapeExt",
+          randomId,
+        );
+
         return paperEntityDraft;
       },
+    );
+
+    PLAPI.logService.progress(
+      "Metadata Scraping",
+      100,
+      true,
+      "MetadataScrapeExt",
+      randomId,
     );
 
     for (const error of metadataScraperErrors) {
@@ -265,17 +302,9 @@ export class MetadataScrapeService {
       scrapers,
     );
 
-    const paperEntityDraftAndErrorsAdditional = await this._scrapeAdditional(
-      paperEntityDraftAndErrors.paperEntityDraft,
-      scrapers,
-    );
-
     return {
-      paperEntityDraft: paperEntityDraftAndErrorsAdditional.paperEntityDraft,
-      errors: [
-        ...paperEntityDraftAndErrors.errors,
-        ...paperEntityDraftAndErrorsAdditional.errors,
-      ],
+      paperEntityDraft: paperEntityDraftAndErrors.paperEntityDraft,
+      errors: [...paperEntityDraftAndErrors.errors],
     };
   }
 
@@ -340,7 +369,7 @@ export class MetadataScrapeService {
     return this._scrapePipeline(
       paperEntityDraft,
       enabledScrapers,
-      ADDITIONAL_SCRAPERS,
+      CLIENTSIDE_SCRAPERS,
       0,
       300,
     );
