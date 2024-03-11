@@ -6,6 +6,7 @@ import stringSimilarity from "string-similarity";
 
 import { DOIScraper } from "./doi";
 import { Scraper, ScraperRequestType } from "./scraper";
+import { isEmpty } from "@/utils/string";
 
 interface ResponseType {
   doi: string;
@@ -13,7 +14,7 @@ interface ResponseType {
     vorDoi: string;
   };
   title: string;
-  publishedDate: string;
+  statusDate: string;
   authors: {
     firstName: string;
     lastName: string;
@@ -23,7 +24,7 @@ interface ResponseType {
 export class ChemRxivPreciseScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
     return (
-      paperEntityDraft.doi !== "" && paperEntityDraft.doi.includes("chemrxiv")
+      !isEmpty(paperEntityDraft.doi) && paperEntityDraft.doi.includes("chemrxiv")
     );
   }
 
@@ -31,61 +32,47 @@ export class ChemRxivPreciseScraper extends Scraper {
     const scrapeURL = `https://chemrxiv.org/engage/chemrxiv/public-api/v1/items/doi/${paperEntityDraft.doi}`;
     const headers = {};
 
-    return { scrapeURL, headers };
+    return { scrapeURL, headers, sim_threshold: 0.95 };
   }
 
   static parsingProcess(
-    rawResponse: { body: ResponseType | { itemHits: ResponseType[] } },
-    paperEntityDraft: PaperEntity,
-  ): PaperEntity {
-    const parsedResponse = rawResponse.body;
-    let chemRxivResponses: ResponseType[];
-    if (parsedResponse.hasOwnProperty("itemHits")) {
-      chemRxivResponses = (parsedResponse as { itemHits: ResponseType[] })
-        .itemHits;
+    rawResponse: string
+  ): PaperEntity[] {
+    const parsedResponse = JSON.parse(rawResponse) as
+    | ResponseType
+    | { itemHits: ResponseType[] };
+  let chemRxivResponses: ResponseType[];
+  if (parsedResponse.hasOwnProperty("itemHits")) {
+    chemRxivResponses = (parsedResponse as { itemHits: ResponseType[] })
+      .itemHits;
+  } else {
+    chemRxivResponses = [parsedResponse as ResponseType];
+  }
+
+  const candidatePaperEntityDrafts: PaperEntity[] = [];
+
+  for (const response of chemRxivResponses) {
+    let item: ResponseType;
+    if ((response as any).item) {
+      item = (response as any).item;
     } else {
-      chemRxivResponses = [parsedResponse as ResponseType];
+      item = response;
+    }
+    const candidatePaperEntityDraft = new PaperEntity();
+    candidatePaperEntityDraft.title = item.title;
+    candidatePaperEntityDraft.authors = item.authors
+      .map((a) => `${a.firstName} ${a.lastName}`)
+      .join(", ");
+    candidatePaperEntityDraft.pubTime = item.statusDate.slice(0, 4);
+    if (item.vor) {
+      candidatePaperEntityDraft.doi = item.vor.vorDoi;
+    } else {
+      candidatePaperEntityDraft.publication = "chemRxiv";
     }
 
-    for (const response of chemRxivResponses) {
-      let item: ResponseType;
-      if ((response as any).item) {
-        item = (response as any).item;
-      } else {
-        item = response;
-      }
-
-      const plainHitTitle = stringUtils.formatString({
-        str: item.title,
-        removeStr: "&amp;",
-        removeSymbol: true,
-        lowercased: true,
-      });
-
-      const existTitle = stringUtils.formatString({
-        str: paperEntityDraft.title,
-        removeStr: "&amp;",
-        removeSymbol: true,
-        lowercased: true,
-      });
-
-      const sim = stringSimilarity.compareTwoStrings(plainHitTitle, existTitle);
-
-      if (item.doi === paperEntityDraft.doi || sim > 0.95) {
-        paperEntityDraft.title = item.title;
-        paperEntityDraft.authors = item.authors
-          .map((a) => `${a.firstName} ${a.lastName}`)
-          .join(", ");
-        paperEntityDraft.pubTime = item.publishedDate.slice(0, 4);
-        if (item.vor) {
-          paperEntityDraft.doi = item.vor.vorDoi;
-        } else {
-          paperEntityDraft.publication = "chemRxiv";
-        }
-        break;
-      }
-    }
-    return paperEntityDraft;
+    candidatePaperEntityDrafts.push(candidatePaperEntityDraft);
+  }
+  return candidatePaperEntityDrafts;
   }
 
   static async scrape(
@@ -96,24 +83,27 @@ export class ChemRxivPreciseScraper extends Scraper {
       return paperEntityDraft;
     }
 
-    const { scrapeURL, headers } = this.preProcess(paperEntityDraft);
-
+    const { scrapeURL, headers, sim_threshold } =
+      this.preProcess(paperEntityDraft);
     const response = await PLExtAPI.networkTool.get(
       scrapeURL,
       headers,
       1,
-      5000,
+      10000,
       false,
-      true,
+      false
     );
-    paperEntityDraft = this.parsingProcess(
-      response,
+    const candidatePaperEntityDrafts = this.parsingProcess(response.body);
+
+    let updatedPaperEntityDraft = this.matchingProcess(
       paperEntityDraft,
-    ) as PaperEntity;
+      candidatePaperEntityDrafts,
+      sim_threshold,
+    );
 
-    paperEntityDraft = await DOIScraper.scrape(paperEntityDraft);
+    updatedPaperEntityDraft = await DOIScraper.scrape(updatedPaperEntityDraft);
 
-    return paperEntityDraft;
+    return updatedPaperEntityDraft;
   }
 }
 
@@ -126,6 +116,6 @@ export class ChemRxivFuzzyScraper extends ChemRxivPreciseScraper {
     const scrapeURL = `https://chemrxiv.org/engage/chemrxiv/public-api/v1/items?term=${paperEntityDraft.title}`;
     const headers = {};
 
-    return { scrapeURL, headers };
+    return { scrapeURL, headers, sim_threshold: 0.95};
   }
 }

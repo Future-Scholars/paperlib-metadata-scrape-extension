@@ -130,6 +130,7 @@ export class MetadataScrapeService {
         const paperEntityDraftAndErrors = await this.scrapePMS(
           paperEntityDraft,
           scrapers,
+          force,
         );
         paperEntityDraft = paperEntityDraftAndErrors.paperEntityDraft;
 
@@ -147,6 +148,7 @@ export class MetadataScrapeService {
           const paperEntityDraftAndErrors = await this.scrapeClientside(
             paperEntityDraft,
             scrapers,
+            force,
           );
           paperEntityDraft = paperEntityDraftAndErrors.paperEntityDraft;
 
@@ -218,6 +220,7 @@ export class MetadataScrapeService {
   async scrapePMS(
     paperEntityDraft: PaperEntity,
     scrapers: string[] = [],
+    force: boolean = false,
   ): Promise<{ paperEntityDraft: PaperEntity; errors: Error[] }> {
     const enabeledPMSScraperList = scrapers.filter((name) =>
       Array.from(PAPERLIB_METADATA_SERVICE_SCRAPERS.keys()).includes(name),
@@ -234,6 +237,7 @@ export class MetadataScrapeService {
       const paperEntityDraftAndErrors = await this.scrapePMSLocalBackup(
         paperEntityDraft,
         scrapers,
+        force,
       );
 
       paperEntityDraft = paperEntityDraftAndErrors.paperEntityDraft;
@@ -253,11 +257,13 @@ export class MetadataScrapeService {
   async scrapePMSLocalBackup(
     paperEntityDraft: PaperEntity,
     scrapers: string[] = [],
+    force: boolean = false,
   ): Promise<{ paperEntityDraft: PaperEntity; errors: Error[] }> {
     const errors: Error[] = [];
     const draftAndErrorsPrecise = await this._scrapePrecise(
       paperEntityDraft,
       scrapers,
+      force,
     );
     paperEntityDraft = draftAndErrorsPrecise.paperEntityDraft;
     errors.push(...draftAndErrorsPrecise.errors);
@@ -266,6 +272,7 @@ export class MetadataScrapeService {
       const draftAndErrorsFuzzy = await this._scrapeFuzzy(
         paperEntityDraft,
         scrapers,
+        force,
       );
       paperEntityDraft = draftAndErrorsFuzzy.paperEntityDraft;
       errors.push(...draftAndErrorsFuzzy.errors);
@@ -273,6 +280,7 @@ export class MetadataScrapeService {
     const draftAndErrorsAdditional = await this._scrapeAdditional(
       paperEntityDraft,
       scrapers,
+      force,
     );
     paperEntityDraft = draftAndErrorsAdditional.paperEntityDraft;
     errors.push(...draftAndErrorsAdditional.errors);
@@ -290,6 +298,7 @@ export class MetadataScrapeService {
   async scrapeClientside(
     paperEntityDraft: PaperEntity,
     scrapers: string[] = [],
+    force = false,
   ): Promise<{ paperEntityDraft: PaperEntity; errors: Error[] }> {
     if (metadataUtils.isMetadataCompleted(paperEntityDraft)) {
       return {
@@ -300,6 +309,7 @@ export class MetadataScrapeService {
     const paperEntityDraftAndErrors = await this._scrapeClientside(
       paperEntityDraft,
       scrapers,
+      force,
     );
 
     return {
@@ -311,6 +321,7 @@ export class MetadataScrapeService {
   async _scrapePrecise(
     paperEntityDraft: PaperEntity,
     scrapers: string[],
+    force: boolean = false,
   ): Promise<{ paperEntityDraft: PaperEntity; errors: Error[] }> {
     const enabledScrapers = Array.from(PRECISE_SCRAPERS.keys()).filter(
       (scraper) => scrapers.includes(scraper),
@@ -322,12 +333,14 @@ export class MetadataScrapeService {
       PRECISE_SCRAPERS,
       0,
       0,
+      force,
     );
   }
 
   async _scrapeFuzzy(
     paperEntityDraft: PaperEntity,
     scrapers: string[],
+    force = false,
   ): Promise<{ paperEntityDraft: PaperEntity; errors: Error[] }> {
     const enabledScrapers = Array.from(FUZZY_SCRAPERS.keys()).filter(
       (scraper) => scrapers.includes(scraper),
@@ -339,12 +352,14 @@ export class MetadataScrapeService {
       FUZZY_SCRAPERS,
       500,
       200,
+      force,
     );
   }
 
   async _scrapeAdditional(
     paperEntityDraft: PaperEntity,
     scrapers: string[],
+    force = false,
   ): Promise<{ paperEntityDraft: PaperEntity; errors: Error[] }> {
     const enabledScrapers = Array.from(ADDITIONAL_SCRAPERS.keys()).filter(
       (scraper) => scrapers.includes(scraper),
@@ -355,12 +370,14 @@ export class MetadataScrapeService {
       ADDITIONAL_SCRAPERS,
       0,
       400,
+      force,
     );
   }
 
   async _scrapeClientside(
     paperEntityDraft: PaperEntity,
     scrapers: string[],
+    force = false,
   ): Promise<{ paperEntityDraft: PaperEntity; errors: Error[] }> {
     const enabledScrapers = Array.from(CLIENTSIDE_SCRAPERS.keys()).filter(
       (scraper) => scrapers.includes(scraper),
@@ -372,6 +389,7 @@ export class MetadataScrapeService {
       CLIENTSIDE_SCRAPERS,
       0,
       300,
+      force,
     );
   }
 
@@ -381,6 +399,7 @@ export class MetadataScrapeService {
     scraperProps: Map<string, { breakable: boolean; mustwait: boolean }>,
     gapTime = 0,
     priority_offset = 0,
+    force = false,
   ): Promise<{ paperEntityDraft: PaperEntity; errors: Error[] }> {
     const errors: Error[] = [];
     return new Promise(async function (resolve, reject) {
@@ -423,6 +442,7 @@ export class MetadataScrapeService {
               const toBeScrapedPaperEntity = new PaperEntity(paperEntityDraft);
               scrapedPaperEntity = await scraperObj.scrape(
                 toBeScrapedPaperEntity,
+                force,
               );
             } catch (error) {
               errors.push(error as Error);

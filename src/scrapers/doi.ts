@@ -1,27 +1,13 @@
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
 
+import { isEmpty } from "@/utils/string";
 import { Scraper, ScraperRequestType } from "./scraper";
 
-interface ResponseType {
-  title: string;
-  author?: { given?: string; family?: string; name?: string }[];
-  published?: {
-    "date-parts": { "0": string[] };
-  };
-  type: string;
-  "container-title"?: string | string[];
-  publisher: string;
-  page: string;
-  volume: string;
-  issue: string;
-  subtitle?: string[];
-  institution?: [{ name: string }];
-}
 
 export class DOIScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
-    return paperEntityDraft.doi !== "";
+    return !isEmpty(paperEntityDraft.doi);
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
@@ -35,18 +21,33 @@ export class DOIScraper extends Scraper {
       Accept: "application/json",
     };
 
-    return { scrapeURL, headers };
+    return { scrapeURL, headers, sim_threshold: -1 };
   }
 
-  static parsingProcess(
-    rawResponse: { body: string; headers: Record<string, string> },
-    paperEntityDraft: PaperEntity,
-  ): PaperEntity {
-    if (rawResponse.body.startsWith("<")) {
-      return paperEntityDraft;
+  static parsingProcess(rawResponse: string): PaperEntity[] {
+    if (rawResponse.startsWith("<")) {
+      return [];
     }
 
-    const response = JSON.parse(rawResponse.body) as ResponseType;
+    const candidatePaperEntityDraft = new PaperEntity();
+
+    const response = JSON.parse(rawResponse) as {
+      title: string;
+      author?: { given?: string; family?: string; name?: string }[];
+      published?: {
+        "date-parts": { "0": string[] };
+      };
+      type: string;
+      "container-title"?: string | string[];
+      publisher: string;
+      page: string;
+      volume: string;
+      issue: string;
+      number: string;
+      subtitle?: string[];
+      institution?: [{ name: string }];
+    };
+
     const title = [
       response.title,
       response.subtitle ? response.subtitle.join(" ") : "",
@@ -68,13 +69,12 @@ export class DOIScraper extends Scraper {
 
     let pubTime = "";
     try {
-      pubTime = response["published-print"]["date-parts"][0][0];
+      pubTime = `${response["published-print"]["date-parts"][0][0]}`;
     } catch (e) {
       pubTime = response.published
-        ? response.published["date-parts"]["0"][0]
+        ? `${response.published["date-parts"]["0"][0]}`
         : "";
     }
-
     let pubType;
     if (response.type == "proceedings-article") {
       pubType = 1;
@@ -113,27 +113,30 @@ export class DOIScraper extends Scraper {
       }
     }
 
-    paperEntityDraft.title = title;
-    paperEntityDraft.authors = authors;
-    paperEntityDraft.pubTime = `${pubTime}`;
-    paperEntityDraft.pubType = pubType;
-    paperEntityDraft.publication = publication;
+    candidatePaperEntityDraft.title = title;
+    candidatePaperEntityDraft.authors = authors;
+    candidatePaperEntityDraft.pubTime = `${pubTime}`;
+    candidatePaperEntityDraft.pubType = pubType;
+    candidatePaperEntityDraft.publication = publication;
     if (response.volume) {
-      paperEntityDraft.volume = response.volume;
+      candidatePaperEntityDraft.volume = response.volume;
     }
     if (response.issue) {
-      paperEntityDraft.number = response.issue;
+      candidatePaperEntityDraft.number = response.issue;
+    }
+    if (response.number) {
+      candidatePaperEntityDraft.number = response.number;
     }
     if (response.page) {
-      paperEntityDraft.pages = response.page;
+      candidatePaperEntityDraft.pages = response.page;
     }
     if (response.publisher) {
-      paperEntityDraft.publisher =
+      candidatePaperEntityDraft.publisher =
         response.publisher ===
         "Institute of Electrical and Electronics Engineers (IEEE)"
           ? "IEEE"
           : response.publisher;
     }
-    return paperEntityDraft;
+    return [candidatePaperEntityDraft];
   }
 }

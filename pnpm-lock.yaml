@@ -6,11 +6,11 @@ settings:
 
 devDependencies:
   '@citation-js/core':
-    specifier: ^0.7.1
-    version: 0.7.1
+    specifier: ^0.7.9
+    version: 0.7.9
   '@citation-js/plugin-bibtex':
-    specifier: ^0.7.2
-    version: 0.7.2(@citation-js/core@0.7.1)
+    specifier: ^0.7.9
+    version: 0.7.9(@citation-js/core@0.7.9)
   '@rollup/plugin-commonjs':
     specifier: ^25.0.7
     version: 25.0.7
@@ -33,8 +33,8 @@ devDependencies:
     specifier: ^6.1.11
     version: 6.1.11
   paperlib-api:
-    specifier: ^0.0.16
-    version: 0.0.16(typescript@5.1.3)(vue@3.4.14)
+    specifier: ^0.1.2
+    version: 0.1.2(typescript@5.1.3)(vue@3.4.14)
   prettier:
     specifier: ^3.1.1
     version: 3.1.1
@@ -124,8 +124,8 @@ packages:
       - encoding
     dev: true
 
-  /@citation-js/core@0.7.1:
-    resolution: {integrity: sha512-vt7O/KbWNj6v0/fTKRJfjLE0VU4bV13LR69bG4V4lvWEq8TqXSNR4TVEINJuAwBLCofTk6LRyF82oGpb9AgaPQ==}
+  /@citation-js/core@0.7.9:
+    resolution: {integrity: sha512-fSbkB32JayDChZnAYC/kB+sWHRvxxL7ibVetyBOyzOc+5aCnjb6UVsbcfhnkOIEyAMoRRvWDyFmakEoTtA5ttQ==}
     engines: {node: '>=16.0.0'}
     dependencies:
       '@citation-js/date': 0.5.1
@@ -169,13 +169,13 @@ packages:
       moo: 0.5.2
     dev: true
 
-  /@citation-js/plugin-bibtex@0.7.2(@citation-js/core@0.7.1):
-    resolution: {integrity: sha512-QkgPfYbs1dierenxKWzIlPV7450Jci8bvZbcpjO3HQTfTaj15SV2C2AaeKhUotXZmTjm49AJQWHZtrNh+7YWjg==}
+  /@citation-js/plugin-bibtex@0.7.9(@citation-js/core@0.7.9):
+    resolution: {integrity: sha512-gIJpCd6vmmTOcRfDrSOjtoNhw2Mi94UwFxmgJ7GwkXyTYcNheW5VlMMo1tlqjakJGARQ0eOsKcI57gSPqJSS2g==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
       '@citation-js/core': ^0.7.0
     dependencies:
-      '@citation-js/core': 0.7.1
+      '@citation-js/core': 0.7.9
       '@citation-js/date': 0.5.1
       '@citation-js/name': 0.4.2
       moo: 0.5.2
@@ -506,7 +506,7 @@ packages:
     dependencies:
       '@types/http-cache-semantics': 4.0.4
       '@types/keyv': 3.1.4
-      '@types/node': 18.19.7
+      '@types/node': 16.18.1
       '@types/responselike': 1.0.3
     dev: true
 
@@ -521,7 +521,7 @@ packages:
   /@types/keyv@3.1.4:
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
     dependencies:
-      '@types/node': 18.19.7
+      '@types/node': 16.18.1
     dev: true
 
   /@types/node@16.18.1:
@@ -537,7 +537,7 @@ packages:
   /@types/responselike@1.0.3:
     resolution: {integrity: sha512-H/+L+UkTV33uf49PH5pCAUBVPNj2nDBXTN+qS1dOwyyg24l3CcicicCA7ca+HMvJBZcFgl5r8e+RR6elsb4Lyw==}
     dependencies:
-      '@types/node': 18.19.7
+      '@types/node': 16.18.1
     dev: true
 
   /@types/semver@7.5.6:
@@ -552,7 +552,7 @@ packages:
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
     requiresBuild: true
     dependencies:
-      '@types/node': 18.19.7
+      '@types/node': 16.18.1
     dev: true
     optional: true
 
@@ -1948,8 +1948,8 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
-  /paperlib-api@0.0.16(typescript@5.1.3)(vue@3.4.14):
-    resolution: {integrity: sha512-9pmIJZ042B7SQX/ITaK8EHCMUzO1VobAvWOsLorDfplKNz555oYvAzblWLbqZg1xQTKMKKgxF/kgJ1HfJI+2UA==}
+  /paperlib-api@0.1.2(typescript@5.1.3)(vue@3.4.14):
+    resolution: {integrity: sha512-mZhA2KrbYYFZdT2WVJWXwQYuL50jBdMph3hDIU04qRUx/1X4kWLlRuMG7YQCjz4WR+tj7WxXH2iLpdDYdEXegg==}
     engines: {node: '>=18.16.1'}
     dependencies:
       citation-js: 0.6.4

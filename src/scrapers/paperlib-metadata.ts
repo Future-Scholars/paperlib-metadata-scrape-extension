@@ -56,14 +56,14 @@ export class PaperlibMetadataServiceScraper {
 
     const headers = {};
 
-    return { scrapeURL, headers };
+    return { scrapeURL, headers, sim_threshold: -1 };
   }
 
   static parsingProcess(
-    rawResponse: { body: ResponseType; headers: Record<string, string> },
+    rawResponse: ResponseType,
     paperEntityDraft: PaperEntity,
   ): PaperEntity {
-    const response = rawResponse.body;
+    const response = rawResponse;
 
     paperEntityDraft.title = response.title;
     paperEntityDraft.authors = response.authors;
@@ -100,6 +100,6 @@ export class PaperlibMetadataServiceScraper {
       false,
       true,
     );
-    return this.parsingProcess(response, paperEntityDraft);
+    return this.parsingProcess(response.body, paperEntityDraft);
   }
 }

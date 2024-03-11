@@ -1,22 +1,19 @@
 import { PLExtAPI } from "paperlib-api/api";
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
-import stringSimilarity from "string-similarity";
 
+import { isEmpty } from "@/utils/string";
 import { Scraper, ScraperRequestType } from "./scraper";
 
 export class CrossRefScraper extends Scraper {
   static checkEnable(paperEntityDraft: PaperEntity): boolean {
-    return (
-      (paperEntityDraft.title !== "" || paperEntityDraft.doi !== "") &&
-      !paperEntityDraft.doi.toLowerCase().includes("arxiv")
-    );
+    return !isEmpty(paperEntityDraft.doi) || !isEmpty(paperEntityDraft.title);
   }
 
   static preProcess(paperEntityDraft: PaperEntity): ScraperRequestType {
     let scrapeURL;
     if (
-      paperEntityDraft.doi !== "" &&
+      paperEntityDraft.doi &&
       !paperEntityDraft.doi.toLowerCase().includes("arxiv")
     ) {
       scrapeURL = `https://api.crossref.org/works/${encodeURIComponent(
@@ -46,127 +43,112 @@ export class CrossRefScraper extends Scraper {
     }
 
     const headers = {};
-    return { scrapeURL, headers };
+    return { scrapeURL, headers, sim_threshold: 0.95 };
   }
 
-  static parsingProcess(
-    rawResponse: { body: any },
-    paperEntityDraft: PaperEntity,
-    fromDOI = false,
-  ): PaperEntity {
+  static parsingProcess(rawResponse: string, fromDOI = false): PaperEntity[] {
     let parsedResponse;
 
     if (fromDOI) {
-      parsedResponse = rawResponse.body as {
+      parsedResponse = JSON.parse(rawResponse) as {
         message: HitItem;
       };
     } else {
-      parsedResponse = rawResponse.body as {
+      parsedResponse = JSON.parse(rawResponse) as {
         message: {
           items: HitItem[];
         };
       };
     }
-
-    let hitItem;
+    let hitItems;
 
     if (fromDOI) {
-      hitItem = parsedResponse.message as HitItem;
+      hitItems = [parsedResponse.message as HitItem];
     } else {
-      const hitItems = parsedResponse.message as { items: HitItem[] };
-      for (const item of hitItems.items) {
-        const plainHitTitle = stringUtils.formatString({
-          str: item.title[0],
-          removeStr: "&amp;",
-          removeSymbol: true,
-          lowercased: true,
-        });
-
-        const existTitle = stringUtils.formatString({
-          str: paperEntityDraft.title,
-          removeStr: "&amp;",
-          removeSymbol: true,
-          lowercased: true,
-        });
-
-        const sim = stringSimilarity.compareTwoStrings(
-          plainHitTitle,
-          existTitle,
-        );
-        if (sim > 0.95) {
-          hitItem = item;
-          break;
-        }
-      }
+      hitItems = parsedResponse.message.items as HitItem[];
     }
 
-    if (hitItem) {
-      paperEntityDraft.title = hitItem.title[0];
-      paperEntityDraft.doi = hitItem.DOI;
-      paperEntityDraft.publisher = hitItem.publisher;
+    const candidatePaperEntityDrafts: PaperEntity[] = [];
+    for (const item of hitItems) {
+      const candidatePaperEntityDraft = new PaperEntity();
+      candidatePaperEntityDraft.title = item.title[0];
+      candidatePaperEntityDraft.doi = item.DOI;
+      candidatePaperEntityDraft.publisher = item.publisher;
 
-      if (hitItem.type?.includes("journal")) {
-        paperEntityDraft.pubType = 0;
+      if (item.type?.includes("journal")) {
+        candidatePaperEntityDraft.pubType = 0;
       } else if (
-        hitItem.type?.includes("book") ||
-        hitItem.type?.includes("monograph")
+        item.type?.includes("book") ||
+        item.type?.includes("monograph")
       ) {
-        paperEntityDraft.pubType = 3;
-      } else if (hitItem.type?.includes("proceedings")) {
-        paperEntityDraft.pubType = 1;
+        candidatePaperEntityDraft.pubType = 3;
+      } else if (item.type?.includes("proceedings")) {
+        candidatePaperEntityDraft.pubType = 1;
       } else {
-        paperEntityDraft.pubType = 2;
+        candidatePaperEntityDraft.pubType = 2;
       }
 
-      paperEntityDraft.pages = hitItem.page;
+      candidatePaperEntityDraft.pages = item.page;
 
       let publication;
-      if (hitItem.type?.includes("monograph")) {
-        publication = hitItem.publisher;
+      if (item.type?.includes("monograph")) {
+        publication = item.publisher;
       } else {
-        publication = hitItem["container-title"]?.join(", ");
+        publication = item["container-title"]?.join(", ");
       }
 
-      paperEntityDraft.publication =
+      candidatePaperEntityDraft.publication =
         publication?.replaceAll("&amp;", "&") || "";
-
       let pubTime = "";
       try {
-        pubTime = hitItem["published-print"]["date-parts"][0][0];
+        pubTime = `${item["published-print"]["date-parts"][0][0]}`;
       } catch (e) {
-        pubTime = `${hitItem.published?.["date-parts"]?.[0]?.[0]}`;
+        pubTime = `${item.published?.["date-parts"]?.[0]?.[0]}`;
       }
-
-      paperEntityDraft.pubTime = `${pubTime}`;
-      paperEntityDraft.authors = hitItem.author
+      candidatePaperEntityDraft.pubTime = pubTime;
+      candidatePaperEntityDraft.authors = item.author
         ?.map((author) => `${author.given} ${author.family}`)
         .join(", ");
-      paperEntityDraft.number = hitItem.issue;
-      paperEntityDraft.volume = hitItem.volume;
+      candidatePaperEntityDraft.number = item.issue;
+      candidatePaperEntityDraft.volume = item.volume;
+
+      candidatePaperEntityDrafts.push(candidatePaperEntityDraft);
     }
 
-    return paperEntityDraft;
+    return candidatePaperEntityDrafts;
   }
 
-  static async scrape(paperEntityDraft: PaperEntity): Promise<PaperEntity> {
-    if (!this.checkEnable(paperEntityDraft)) {
+  static async scrape(
+    paperEntityDraft: PaperEntity,
+    force = false,
+  ): Promise<PaperEntity> {
+    if (!this.checkEnable(paperEntityDraft) && !force) {
       return paperEntityDraft;
     }
 
-    const { scrapeURL, headers } = this.preProcess(paperEntityDraft);
+    let { scrapeURL, headers, sim_threshold } =
+      this.preProcess(paperEntityDraft);
 
+    let candidatePaperEntityDrafts: PaperEntity[] = [];
     if (scrapeURL.startsWith("https://api.crossref.org")) {
-      const response = await PLExtAPI.networkTool.get(
-        scrapeURL,
-        headers,
-        1,
-        10000,
-        false,
-        true,
-      );
-      return this.parsingProcess(
-        response,
-        paperEntityDraft,
+      let response: { body: string } = { body: "" };
+      if (scrapeURL.includes("bibliographic")) {
+        const publicScrapeURL = scrapeURL.replace(
+          "&mailto=hi@paperlib.app",
+          "",
+        );
+
+        response = await Promise.any([
+          PLExtAPI.networkTool.get(publicScrapeURL, headers, 1, 10000),
+          PLExtAPI.networkTool.get(scrapeURL, headers, 1, 10000),
+        ]);
+      } else {
+        response = await PLExtAPI.networkTool.get(scrapeURL, headers, 1, 10000);
+        sim_threshold = -1;
+      }
+
+      candidatePaperEntityDrafts = this.parsingProcess(
+        response.body,
         !scrapeURL.includes("bibliographic"),
       );
     } else {
@@ -175,15 +157,26 @@ export class CrossRefScraper extends Scraper {
         headers,
         1,
         10000,
-        false,
-        true,
       );
 
-      const potentialDOI = JSON.stringify(response.body)
+      const potentialDOI = response.body
         .split("|")
         .pop()
         ?.match(/10.\d{4,9}\/[-._;()/:A-Z0-9]+/gim);
       if (!potentialDOI) {
+        // const fallbackScrapeURL = encodeURI(
+        //   `https://api.crossref.org/works?query.bibliographic=${formatString({
+        //     str: paperEntityDraft.title,
+        //     whiteSymbol: true,
+        //   })}&rows=2&mailto=hi@paperlib.app`,
+        // );
+        // const response = (await networkGet(
+        //   fallbackScrapeURL,
+        //   headers,
+        //   10000,
+        //   true,
+        // )) as Response<string>;
+        // return this.parsingProcess(response, paperEntityDraft, false);
         return paperEntityDraft;
       } else {
         const response = await PLExtAPI.networkTool.get(
@@ -191,12 +184,18 @@ export class CrossRefScraper extends Scraper {
           headers,
           1,
           10000,
-          false,
-          true,
         );
-        return this.parsingProcess(response, paperEntityDraft, true);
+        candidatePaperEntityDrafts = this.parsingProcess(response.body, true);
       }
     }
+
+    const updatedPaperEntityDraft = this.matchingProcess(
+      paperEntityDraft,
+      candidatePaperEntityDrafts,
+      sim_threshold,
+    );
+
+    return updatedPaperEntityDraft;
   }
 }
 

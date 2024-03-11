@@ -60,79 +60,60 @@ export class IEEEScraper extends Scraper {
       Accept: "application/json",
     };
 
-    return { scrapeURL, headers };
+    return { scrapeURL, headers, sim_threshold: 0.95 };
   }
 
-  static parsingProcess(
-    rawResponse: { body: string },
-    paperEntityDraft: PaperEntity,
-  ): PaperEntity {
-    const response = JSON.parse(rawResponse.body) as ResponseType;
+  static parsingProcess(rawResponse: string): PaperEntity[] {
+    const response = JSON.parse(rawResponse) as ResponseType;
+    const candidatePaperEntityDrafts: PaperEntity[] = [];
     if (response.total_records > 0) {
       for (const article of response.articles) {
-        const plainHitTitle = stringUtils.formatString({
-          str: article.title,
-          removeStr: "&amp;",
-          removeSymbol: true,
-          lowercased: true,
-        });
+        const candidatePaperEntityDraft = new PaperEntity();
+        const title = article.title.replace(/&amp;/g, "&");
+        const authors = article.authors.authors
+          .map((author) => {
+            return author.full_name.trim();
+          })
+          .join(", ");
 
-        const existTitle = stringUtils.formatString({
-          str: paperEntityDraft.title,
-          removeStr: "&amp;",
-          removeSymbol: true,
-          lowercased: true,
-        });
+        const pubTime = article.publication_year;
 
-        if (plainHitTitle != existTitle) {
-          continue;
+        let pubType;
+        if (
+          article.content_type.includes("Journals") ||
+          article.content_type.includes("Article")
+        ) {
+          pubType = 0;
+        } else if (article.content_type.includes("Conferences")) {
+          pubType = 1;
+        } else if (article.content_type.includes("Book")) {
+          pubType = 3;
         } else {
-          const title = article.title.replace(/&amp;/g, "&");
-          const authors = article.authors.authors
-            .map((author) => {
-              return author.full_name.trim();
-            })
-            .join(", ");
-
-          const pubTime = article.publication_year;
-
-          let pubType;
-          if (
-            article.content_type.includes("Journals") ||
-            article.content_type.includes("Article")
-          ) {
-            pubType = 0;
-          } else if (article.content_type.includes("Conferences")) {
-            pubType = 1;
-          } else if (article.content_type.includes("Book")) {
-            pubType = 3;
-          } else {
-            pubType = 2;
-          }
-
-          const publication = article.publication_title;
-          paperEntityDraft.title = title;
-          paperEntityDraft.authors = authors;
-          paperEntityDraft.pubTime = `${pubTime}`;
-          paperEntityDraft.pubType = pubType;
-          paperEntityDraft.publication = publication;
-          if (article.volume) {
-            paperEntityDraft.volume = article.volume;
-          }
-          if (article.start_page) {
-            paperEntityDraft.pages = article.start_page;
-          }
-          if (article.end_page) {
-            paperEntityDraft.pages =
-              paperEntityDraft.pages + "-" + article.end_page;
-          }
-          if (article.publisher) {
-            paperEntityDraft.publisher = article.publisher;
-          }
-          break;
+          pubType = 2;
         }
+
+        const publication = article.publication_title;
+        candidatePaperEntityDraft.title = title;
+        candidatePaperEntityDraft.authors = authors;
+        candidatePaperEntityDraft.pubTime = `${pubTime}`;
+        candidatePaperEntityDraft.pubType = pubType;
+        candidatePaperEntityDraft.publication = publication;
+        if (article.volume) {
+          candidatePaperEntityDraft.volume = article.volume;
+        }
+        if (article.start_page) {
+          candidatePaperEntityDraft.pages = article.start_page;
+        }
+        if (article.end_page) {
+          candidatePaperEntityDraft.pages =
+            candidatePaperEntityDraft.pages + "-" + article.end_page;
+        }
+        if (article.publisher) {
+          candidatePaperEntityDraft.publisher = article.publisher;
+        }
+        candidatePaperEntityDrafts.push(candidatePaperEntityDraft);
       }
     }
-    return paperEntityDraft;
+    return candidatePaperEntityDrafts;
   }
 }

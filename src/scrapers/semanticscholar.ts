@@ -1,7 +1,6 @@
 import { PLExtAPI } from "paperlib-api/api";
 import { PaperEntity } from "paperlib-api/model";
 import { stringUtils } from "paperlib-api/utils";
-import stringSimilarity from "string-similarity";
 
 import { DOIScraper } from "./doi";
 import { Scraper, ScraperRequestType } from "./scraper";
@@ -45,109 +44,116 @@ export class SemanticScholarScraper extends Scraper {
 
     const headers = {};
 
-    return { scrapeURL, headers };
+    return { scrapeURL, headers, sim_threshold: 0.95 };
   }
 
-  static parsingProcess(
-    rawResponse: { body: ResponseType },
-    paperEntityDraft: PaperEntity,
-  ): PaperEntity {
-    const parsedResponse = rawResponse.body;
+  static parsingProcess(rawResponse: string): PaperEntity[] {
+    const parsedResponse = JSON.parse(rawResponse) as {
+      total: number;
+      data: [
+        {
+          title: string;
+          authors?: { name: string }[];
+          publicationVenue?: {
+            name?: string;
+            type?: string;
+          };
+          journal?: {
+            name?: string;
+            pages?: string;
+            volume?: string;
+          };
+          year?: string;
+          externalIds?: {
+            ArXiv?: string;
+            DOI?: string;
+          };
+        },
+      ];
+    };
+
+    const candidatePaperEntityDrafts: PaperEntity[] = [];
 
     if (parsedResponse.total === 0) {
-      return paperEntityDraft;
+      return candidatePaperEntityDrafts;
     }
 
     for (const item of parsedResponse.data) {
-      const plainHitTitle = stringUtils.formatString({
-        str: item.title,
-        removeStr: "&amp;",
-        removeSymbol: true,
-        lowercased: true,
-      });
+      const candidatePaperEntityDraft = new PaperEntity();
 
-      const existTitle = stringUtils.formatString({
-        str: paperEntityDraft.title,
-        removeStr: "&amp;",
-        removeSymbol: true,
-        lowercased: true,
-      });
-
-      const sim = stringSimilarity.compareTwoStrings(plainHitTitle, existTitle);
-      if (sim > 0.95) {
-        if (
-          item.publicationVenue &&
-          item.publicationVenue.name &&
-          item.publicationVenue.type
-        ) {
-          if (item.publicationVenue.type.includes("journal")) {
-            paperEntityDraft.pubType = 0;
-          } else if (item.publicationVenue.type.includes("book")) {
-            paperEntityDraft.pubType = 3;
-          } else if (item.publicationVenue.type.includes("conference")) {
-            paperEntityDraft.pubType = 1;
-          } else {
-            paperEntityDraft.pubType = 2;
-          }
-
-          paperEntityDraft.publication = item.publicationVenue.name.replaceAll(
-            "&amp;",
-            "&",
-          );
+      candidatePaperEntityDraft.title = item.title;
+      candidatePaperEntityDraft.authors =
+        item.authors?.map((author) => author.name).join(", ") ||
+        candidatePaperEntityDraft.authors;
+      if (
+        item.publicationVenue &&
+        item.publicationVenue.name &&
+        item.publicationVenue.type
+      ) {
+        if (item.publicationVenue.type.includes("journal")) {
+          candidatePaperEntityDraft.pubType = 0;
+        } else if (item.publicationVenue.type.includes("book")) {
+          candidatePaperEntityDraft.pubType = 3;
+        } else if (item.publicationVenue.type.includes("conference")) {
+          candidatePaperEntityDraft.pubType = 1;
+        } else {
+          candidatePaperEntityDraft.pubType = 2;
         }
-
-        paperEntityDraft.pubTime = item.year ? `${item.year}` : "";
-        paperEntityDraft.authors =
-          item.authors?.map((author) => author.name).join(", ") || "";
-        paperEntityDraft.volume = item.journal?.volume || "";
-        paperEntityDraft.pages = item.journal?.pages || "";
-
-        paperEntityDraft.arxiv = item.externalIds?.ArXiv || "";
-        paperEntityDraft.doi = item.externalIds?.DOI || "";
-        break;
+        candidatePaperEntityDraft.publication =
+          item.publicationVenue.name.replaceAll("&amp;", "&");
       }
+      candidatePaperEntityDraft.pubTime = item.year ? `${item.year}` : "";
+      candidatePaperEntityDraft.volume = item.journal?.volume || "";
+      candidatePaperEntityDraft.pages = item.journal?.pages || "";
+
+      candidatePaperEntityDraft.arxiv = item.externalIds?.ArXiv || "";
+      candidatePaperEntityDraft.doi = item.externalIds?.DOI || "";
+
+      candidatePaperEntityDrafts.push(candidatePaperEntityDraft);
     }
 
-    return paperEntityDraft;
+    return candidatePaperEntityDrafts;
   }
 
-  static async scrape(
-    paperEntityDraft: PaperEntity,
-    force = false,
-  ): Promise<PaperEntity> {
+  static async scrape(paperEntityDraft: PaperEntity, force = false): Promise<PaperEntity> {
     if (!this.checkEnable(paperEntityDraft) && !force) {
       return paperEntityDraft;
     }
 
-    const { scrapeURL, headers } = this.preProcess(paperEntityDraft);
+    const { scrapeURL, headers, sim_threshold } =
+      this.preProcess(paperEntityDraft);
 
     const response = await PLExtAPI.networkTool.get(
       scrapeURL,
       headers,
       1,
       10000,
-      false,
-      true,
     );
-    paperEntityDraft = this.parsingProcess(
-      response,
+    const candidatePaperEntityDrafts = this.parsingProcess(response.body);
+
+    let updatedPaperEntityDraft = this.matchingProcess(
       paperEntityDraft,
-    ) as PaperEntity;
+      candidatePaperEntityDrafts,
+      sim_threshold,
+    );
 
-    if (paperEntityDraft.doi) {
+    if (updatedPaperEntityDraft.doi) {
       const authorListfromSemanticScholar =
-        paperEntityDraft.authors.split(", ");
+        updatedPaperEntityDraft.authors.split(", ");
 
-      paperEntityDraft = await DOIScraper.scrape(paperEntityDraft);
+      updatedPaperEntityDraft = await DOIScraper.scrape(
+        updatedPaperEntityDraft,
+      );
 
       // Sometimes DOI returns incomplete author list, so we use Semantic Scholar's author list if it is longer
       if (
-        paperEntityDraft.authors.split(", ").length <
+        updatedPaperEntityDraft.authors.split(", ").length <
         authorListfromSemanticScholar.length
       ) {
-        paperEntityDraft.authors = authorListfromSemanticScholar.join(", ");
+        updatedPaperEntityDraft.authors =
+          authorListfromSemanticScholar.join(", ");
       }
     }
-    return paperEntityDraft;
+    return updatedPaperEntityDraft;
   }
 }

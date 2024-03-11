@@ -16,11 +16,42 @@ interface BibtexEntity {
   issue: string;
 }
 
-export function bibtex2json(bibtex: string): BibtexEntity[] {
+interface BibtexEntry {
+  title: string;
+  author: [{ given: string; family: string }];
+  issued: {
+    "date-parts": [[number]];
+  };
+  type: string;
+  "container-title": string;
+  publisher: string;
+  page: string;
+  volume: string;
+  issue: string;
+}
+
+export function bibtex2json(bibtex: string): BibtexEntry[] {
   try {
     plugins.input.add("@bibtex/text", plugin);
+    // remove all special chars in citation keys
+    let bibtexComps = bibtex.trim().split("\n").filter(v => v)
+    
+    for (let i = 0; i < Math.min(2, bibtexComps.length); i++) {
+      let line = bibtexComps[i]
+      if (/^[^=]*,$/.test(line)) {
+        if (line.startsWith("@")){
+          const lineComp = line.split("{")
+          line = lineComp[0] + "{" + lineComp[1].replace(/[^a-zA-Z0-9,]/g, "")
+        } else {
+          line = line.replace(/[^a-zA-Z0-9,]/g, "");
+        }
+      }
+      bibtexComps[i] = line
+    }
+    bibtex = bibtexComps.join("\n")
 
-    return Cite(bibtex, { forceType: "@bibtex/text" }).data;
+    const csls = new Cite(bibtex);
+    return csls.data;
   } catch (e) {
     console.error(e);
     return [];
