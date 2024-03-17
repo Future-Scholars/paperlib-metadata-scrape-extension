@@ -82,7 +82,7 @@ export class Scraper {
       return this._mergingProcess(paperEntityDraft, candidatePaperEntityDrafts[0]);
     }
 
-    const matchIncludeAuthors = !paperEntityDraft.authors;
+    const matchIncludeAuthors = paperEntityDraft.authors !== "";
     const matchTerm = this._matchingString(
       paperEntityDraft.title,
       paperEntityDraft.authors,
