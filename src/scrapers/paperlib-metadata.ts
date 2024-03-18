@@ -66,17 +66,17 @@ export class PaperlibMetadataServiceScraper {
     const response = rawResponse;
 
     paperEntityDraft.title = response.title;
-    paperEntityDraft.authors = response.authors;
-    paperEntityDraft.publication = response.publication;
-    paperEntityDraft.pubTime = response.pubTime;
-    paperEntityDraft.pubType = response.pubType;
-    paperEntityDraft.doi = response.doi;
-    paperEntityDraft.arxiv = response.arxiv;
-    paperEntityDraft.pages = response.pages;
-    paperEntityDraft.volume = response.volume;
-    paperEntityDraft.number = response.number;
-    paperEntityDraft.publisher = response.publisher;
-    paperEntityDraft.codes = response.codes;
+    paperEntityDraft.authors = response.authors || paperEntityDraft.authors;
+    paperEntityDraft.publication = response.publication || paperEntityDraft.publication;
+    paperEntityDraft.pubTime = response.pubTime || paperEntityDraft.pubTime;
+    paperEntityDraft.pubType = response.pubType || paperEntityDraft.pubType;
+    paperEntityDraft.doi = response.doi || paperEntityDraft.doi;
+    paperEntityDraft.arxiv = response.arxiv || paperEntityDraft.arxiv;
+    paperEntityDraft.pages = response.pages || paperEntityDraft.pages;
+    paperEntityDraft.volume = response.volume || paperEntityDraft.volume;
+    paperEntityDraft.number = response.number || paperEntityDraft.number;
+    paperEntityDraft.publisher = response.publisher || paperEntityDraft.publisher;
+    paperEntityDraft.codes = response.codes || paperEntityDraft.codes;
 
     return paperEntityDraft;
   }

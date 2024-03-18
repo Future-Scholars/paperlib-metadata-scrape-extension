@@ -43,6 +43,10 @@ const PAPERLIB_METADATA_SERVICE_SCRAPERS = new Map([
   ...PRECISE_SCRAPERS,
   ...FUZZY_SCRAPERS,
   ...ADDITIONAL_SCRAPERS,
+  ...(new Map([
+    ["springer", { breakable: true, mustwait: false }],
+    ["adsabs", { breakable: false, mustwait: false }],
+  ]))
 ]);
 
 const CLIENTSIDE_SCRAPERS = new Map([

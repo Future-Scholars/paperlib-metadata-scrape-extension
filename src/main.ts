@@ -95,6 +95,20 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
           value: true,
           order: 1,
         },
+        "scraper-springer": {
+          type: "boolean",
+          name: "Springer",
+          description: "Springer",
+          value: false,
+          order: 1,
+        },
+        "scraper-adsabs": {
+          type: "boolean",
+          name: "NASA/ADS",
+          description: "adsabs.harvard.edu",
+          value: false,
+          order: 1,
+        },
         "scraper-ieee": {
           type: "boolean",
           name: "IEEE xplore",
@@ -239,7 +253,8 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
         "scraper-pwc": true,
         "scraper-pubmed": false,
         "scraper-semanticscholar": true,
-        "scraper-spie": false,
+        "scraper-springer": false,
+        "scraper-adsabs": false,
         "scraper-ieee": false,
       });
     } else if (presetting === "es") {
@@ -253,7 +268,8 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
         "scraper-pwc": false,
         "scraper-pubmed": false,
         "scraper-semanticscholar": true,
-        "scraper-spie": false,
+        "scraper-springer": true,
+        "scraper-adsabs": true,
         "scraper-ieee": false,
       });
     } else if (presetting === "phy") {
@@ -267,7 +283,8 @@ class PaperlibMetadataScrapeExtension extends PLExtension {
         "scraper-pwc": false,
         "scraper-pubmed": false,
         "scraper-semanticscholar": true,
-        "scraper-spie": true,
+        "scraper-adsabs": true,
+        "scraper-springer": false,
         "scraper-ieee": false,
       });
     }
