@@ -95,11 +95,15 @@ export class PaperlibMetadataServiceScraper {
     const response = await PLExtAPI.networkTool.get(
       scrapeURL,
       headers,
-      1,
+      0,
       15000,
       false,
       true,
     );
+
+    if (response.status !== 200) {
+      throw new Error(`PMS: ${response.status} - ${response.statusText}`);
+    }
     return this.parsingProcess(response.body, paperEntityDraft);
   }
 }

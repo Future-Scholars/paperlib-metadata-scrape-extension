@@ -235,6 +235,20 @@ export class MetadataScrapeService {
         paperEntityDraft,
         ["cache"].concat(enabeledPMSScraperList),
       );
+
+      if (paperEntityDraft.publication === "" && (paperEntityDraft.arxiv || paperEntityDraft.doi)) {
+        const paperEntityDraftAndErrors = await this.scrapePMSLocalBackup(
+          paperEntityDraft,
+          scrapers,
+          force,
+        );
+  
+        paperEntityDraft = paperEntityDraftAndErrors.paperEntityDraft;
+  
+        errors.push(...paperEntityDraftAndErrors.errors);
+      }
+
+
     } catch (e) {
       errors.push(e as Error);
 
